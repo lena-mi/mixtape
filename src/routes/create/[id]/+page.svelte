@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { PageData, ActionData } from './$types'
+  import { onMount } from 'svelte'
+
   let { data, form }: { data: PageData, form: ActionData } = $props()
 
   let youtubeUrl = $state('')
@@ -8,21 +10,102 @@
   let loading = $state(false)
   let inputError = $state('')
   let playingId = $state<string | null>(null)
+  let progress = $state(0)   // 0–100
+  let player: any = null
+  let ticker: ReturnType<typeof setInterval> | null = null
+
+  function startTicker() {
+    if (ticker) return
+    ticker = setInterval(() => {
+      if (!player?.getCurrentTime) return
+      const cur = player.getCurrentTime()
+      const dur = player.getDuration()
+      progress = dur > 0 ? (cur / dur) * 100 : 0
+    }, 500)
+  }
+
+  function stopTicker() {
+    if (ticker) { clearInterval(ticker); ticker = null }
+  }
+
+  function seek(e: MouseEvent) {
+    const bar = e.currentTarget as HTMLElement
+    const ratio = (e.clientX - bar.getBoundingClientRect().left) / bar.offsetWidth
+    const dur = player?.getDuration() ?? 0
+    if (dur > 0) player?.seekTo(ratio * dur, true)
+  }
 
   function extractYoutubeVideoId(url: string): string | null {
-    // Handle youtube.com, youtu.be, and youtube-nocookie.com
     const patterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube-nocookie\.com\/embed\/)([^&\n?#]+)/,
-      /^([a-zA-Z0-9_-]{11})$/ // Just the ID
+      /^([a-zA-Z0-9_-]{11})$/
     ]
-    
     for (const pattern of patterns) {
       const match = url.match(pattern)
       if (match) return match[1]
     }
-    
     return null
   }
+
+  function togglePlay(track: { id: string; storage_path?: string }) {
+    if (playingId === track.id) {
+      playingId = null
+      stopTicker()
+      player?.pauseVideo()
+      return
+    }
+    const videoId = track.storage_path ?? null
+    if (!videoId) return
+    playingId = track.id
+    progress = 0
+    if (player) {
+      player.loadVideoById(videoId)
+    }
+  }
+
+  onMount(() => {
+    const initPlayer = () => {
+      player = new (window as any).YT.Player('yt-preview-player', {
+        height: '1',
+        width: '1',
+        playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, playsinline: 1 },
+        events: {
+          onReady: () => {},
+          onStateChange: (e: any) => {
+            if (e.data === 1) {        // playing
+              startTicker()
+            } else if (e.data === 0) { // ended
+              stopTicker()
+              progress = 0
+              const idx = data.tracks.findIndex(t => t.id === playingId)
+              const next = data.tracks[idx + 1]
+              if (next) {
+                playingId = next.id
+                player.loadVideoById(next.storage_path)
+              } else {
+                playingId = null
+              }
+            } else if (e.data === 2) { // paused
+              stopTicker()
+            }
+          }
+        }
+      })
+    }
+
+    if ((window as any).YT?.Player) {
+      initPlayer()
+    } else {
+      ;(window as any).onYouTubeIframeAPIReady = initPlayer
+      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        const tag = document.createElement('script')
+        tag.src = 'https://www.youtube.com/iframe_api'
+        document.head.appendChild(tag)
+      }
+    }
+
+    return () => { stopTicker(); player?.destroy() }
+  })
 
   async function addTrack() {
     inputError = ''
@@ -155,13 +238,18 @@
     <p style="color: gray;">No tracks yet — add one above.</p>
   {/if}
 
+  <!-- Hidden YouTube IFrame player -->
+  <div style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;" aria-hidden="true">
+    <div id="yt-preview-player"></div>
+  </div>
+
   {#each data.tracks as track}
     <div style="padding: 8px 0; border-bottom: 1px solid #eee;">
       <div style="display: flex; align-items: center; gap: 8px;">
         <button
           type="button"
-          onclick={() => playingId = playingId === track.id ? null : track.id}
-          style="background: none; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 12px;"
+          onclick={() => togglePlay(track)}
+          style="background: none; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 12px; flex-shrink: 0;"
         >
           {playingId === track.id ? '■' : '▶'}
         </button>
@@ -178,20 +266,14 @@
         </form>
       </div>
       {#if playingId === track.id}
-        {#if track.storage_path}
-          <iframe
-            width="100%"
-            height="120"
-            src="https://www.youtube.com/embed/{track.storage_path}"
-            title={track.title}
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-            style="margin-top: 8px; border-radius: 4px;"
-          ></iframe>
-        {:else}
-          <p style="color: red; margin-top: 8px;">Video not found</p>
-        {/if}
+        <button
+          type="button"
+          aria-label="Seek"
+          onclick={seek}
+          style="display: block; width: 100%; margin-top: 6px; height: 3px; background: #eee; border-radius: 2px; cursor: pointer; padding: 0; border: none;"
+        >
+          <div style="height: 100%; width: {progress}%; background: #007bff; border-radius: 2px; transition: width 0.4s linear;"></div>
+        </button>
       {/if}
     </div>
   {/each}

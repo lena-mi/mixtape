@@ -1,75 +1,150 @@
 <script lang="ts">
   import type { PageData } from './$types'
   import cassette from '$lib/assets/Casette.jpg'
+  import { onMount } from 'svelte'
 
   let { data }: { data: PageData } = $props()
 
   let currentTrackIndex = $state(0)
-  let isPlayingAll = $state(false)
-  let durationTimer: ReturnType<typeof setTimeout> | null = null
-  let audioElement = $state<HTMLAudioElement | null>(null)
+  let isPlaying = $state(false)
+  let isLoaded = $state(false)
+  let player: any = null
 
-  function startDurationTimer() {
-    // Clear any existing timer
-    if (durationTimer) {
-      clearTimeout(durationTimer)
-      durationTimer = null
+  function extractYoutubeId(url: string): string {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube-nocookie\.com\/embed\/)([^&\n?#]+)/,
+      /^([a-zA-Z0-9_-]{11})$/
+    ]
+    for (const pattern of patterns) {
+      const match = url.match(pattern)
+      if (match) return match[1]
     }
-
-    if (!isPlayingAll) return
-
-    const currentTrack = data.tracks[currentTrackIndex]
-    if (!currentTrack) return
-
-    // Duration is stored in seconds, convert to milliseconds
-    const durationMs = (currentTrack.duration || 180) * 1000
-
-    durationTimer = setTimeout(() => {
-      nextTrack()
-      startDurationTimer() // Restart timer for next track
-    }, durationMs)
+    return ''
   }
 
-  function nextTrack() {
-    if (currentTrackIndex < data.tracks.length - 1) {
-      currentTrackIndex++
-    } else if (isPlayingAll) {
-      // Loop back to start when reaching the end in Play All mode
-      currentTrackIndex = 0
+  function getVideoId(index: number): string {
+    const track = data.tracks[index]
+    if (!track) return ''
+    if (track.storage_path) {
+      if (/^[a-zA-Z0-9_-]{11}$/.test(track.storage_path)) return track.storage_path
+      return extractYoutubeId(track.storage_path)
+    }
+    if (track.source_url) return extractYoutubeId(track.source_url)
+    return ''
+  }
+
+  function goToTrack(index: number) {
+    currentTrackIndex = index
+    if (!player) return
+    const videoId = getVideoId(index)
+    if (!videoId) return
+    if (isPlaying) {
+      player.loadVideoById(videoId)
+    } else {
+      player.cueVideoById(videoId)
     }
   }
 
-  function prevTrack() {
-    if (currentTrackIndex > 0) {
-      currentTrackIndex--
-    }
-    // Clear and restart timer when manually navigating
-    if (durationTimer) {
-      clearTimeout(durationTimer)
-      durationTimer = null
-    }
+  function playAll() {
+    if (!player) return
+    isPlaying = true
+    player.playVideo()
+  }
+
+  function stopAll() {
+    if (!player) return
+    isPlaying = false
+    player.pauseVideo()
   }
 
   function togglePlayAll() {
-    isPlayingAll = !isPlayingAll
-
-    if (isPlayingAll) {
-      startDurationTimer()
+    if (isPlaying) {
+      stopAll()
     } else {
-      // Stop auto-advance
-      if (durationTimer) {
-        clearTimeout(durationTimer)
-        durationTimer = null
+      playAll()
+    }
+  }
+
+  function nextTrack() {
+    const next = currentTrackIndex + 1
+    if (next < data.tracks.length) {
+      goToTrack(next)
+    } else {
+      // Loop back to start when playing
+      if (isPlaying) {
+        currentTrackIndex = 0
+        const videoId = getVideoId(0)
+        if (player && videoId) player.loadVideoById(videoId)
       }
     }
   }
 
-  function playCurrentTrack() {
-    if (audioElement) {
-      audioElement.play()
+  function prevTrack() {
+    if (currentTrackIndex > 0) goToTrack(currentTrackIndex - 1)
+  }
+
+  function onYoutubeStateChange(event: any) {
+    // 0 = ENDED, 1 = PLAYING, 2 = PAUSED, 3 = BUFFERING, 5 = CUED
+    if (event.data === 0 && isPlaying) {
+      const next = currentTrackIndex + 1
+      if (next < data.tracks.length) {
+        currentTrackIndex = next
+        const videoId = getVideoId(next)
+        if (player && videoId) player.loadVideoById(videoId)
+      } else {
+        isPlaying = false
+        currentTrackIndex = 0
+        player.cueVideoById(getVideoId(0))
+      }
+    } else if (event.data === 1) {
+      isPlaying = true
+    } else if (event.data === 2) {
+      isPlaying = false
     }
   }
+
+  onMount(() => {
+    const initPlayer = () => {
+      player = new (window as any).YT.Player('youtube-player', {
+        height: '1',
+        width: '1',
+        videoId: getVideoId(0),
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          playsinline: 1
+        },
+        events: {
+          onReady: () => { isLoaded = true },
+          onStateChange: onYoutubeStateChange
+        }
+      })
+    }
+
+    if ((window as any).YT?.Player) {
+      initPlayer()
+    } else {
+      ;(window as any).onYouTubeIframeAPIReady = initPlayer
+      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+        const tag = document.createElement('script')
+        tag.src = 'https://www.youtube.com/iframe_api'
+        document.head.appendChild(tag)
+      }
+    }
+
+    return () => {
+      if (player?.destroy) player.destroy()
+    }
+  })
 </script>
+
+<!-- Hidden YouTube IFrame player — invisible but required in the DOM -->
+<div style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;" aria-hidden="true">
+  <div id="youtube-player"></div>
+</div>
 
 <main class="tape-page">
   <div class="tape-header">
@@ -91,15 +166,43 @@
     </div>
   </div>
 
+  <div class="player-controls">
+    {#if data.tracks[currentTrackIndex]}
+      <div class="now-playing">
+        <span class="now-playing-title">{data.tracks[currentTrackIndex].title}</span>
+        {#if data.tracks[currentTrackIndex].artist}
+          <span class="now-playing-artist">— {data.tracks[currentTrackIndex].artist}</span>
+        {/if}
+      </div>
+    {/if}
+
+    <div class="track-info">
+      Track {currentTrackIndex + 1} of {data.tracks.length}
+    </div>
+
+    <div class="control-buttons">
+      <button onclick={prevTrack} disabled={currentTrackIndex === 0} class="nav-btn">← Prev</button>
+      <button
+        onclick={togglePlayAll}
+        class="play-all-btn"
+        class:active={isPlaying}
+        disabled={!isLoaded}
+      >
+        {isPlaying ? 'Stop' : 'Play All'}
+      </button>
+      <button onclick={nextTrack} disabled={currentTrackIndex === data.tracks.length - 1 && !isPlaying} class="nav-btn">Next →</button>
+    </div>
+  </div>
+
   <div class="track-list">
     <h3>Tracklist</h3>
     <div class="tracks">
       {#each data.tracks as track, index}
-        <button 
+        <button
           type="button"
-          class="track-item" 
-          class:active={index === currentTrackIndex} 
-          onclick={() => currentTrackIndex = index}
+          class="track-item"
+          class:active={index === currentTrackIndex}
+          onclick={() => goToTrack(index)}
         >
           <span class="track-number">{index + 1}.</span>
           <span class="track-title">{track.title}</span>
@@ -108,52 +211,6 @@
           {/if}
         </button>
       {/each}
-    </div>
-  </div>
-
-  <div class="player-section">
-    {#if data.tracks[currentTrackIndex]}
-      <div class="current-track">
-        <h3>{data.tracks[currentTrackIndex].title}</h3>
-        {#if data.tracks[currentTrackIndex].artist}
-          <p>by {data.tracks[currentTrackIndex].artist}</p>
-        {/if}
-
-        {#if data.tracks[currentTrackIndex].source_type === 'bandcamp' && data.tracks[currentTrackIndex].storage_path}
-          <iframe
-            width="100%"
-            height="200"
-            src="https://www.youtube.com/embed/{data.tracks[currentTrackIndex].storage_path}"
-            title={data.tracks[currentTrackIndex].title}
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-            style="border-radius: 4px; margin: 10px 0;"
-          ></iframe>
-        {:else if data.tracks[currentTrackIndex].source_type === 'bandcamp' && data.tracks[currentTrackIndex].source_url}
-          <iframe
-            src="https://bandcamp.com/EmbeddedPlayer/url={encodeURIComponent(data.tracks[currentTrackIndex].source_url)}/size=small/bgcol=d2d2d2/linkcol=0687f5/transparent=true/"
-            class="bandcamp-embed"
-            allowfullscreen
-            title={data.tracks[currentTrackIndex].title}
-          ></iframe>
-        {:else}
-          <p>File not available</p>
-        {/if}
-      </div>
-    {/if}
-  </div>
-
-  <div class="player-controls">
-    <div class="track-info">
-      Track {currentTrackIndex + 1} of {data.tracks.length}
-    </div>
-    <div class="control-buttons">
-      <button onclick={prevTrack} disabled={currentTrackIndex === 0} class="nav-btn">← Previous</button>
-      <button onclick={togglePlayAll} class="play-all-btn" class:active={isPlayingAll}>
-        {isPlayingAll ? 'Stop Play All' : 'Play All'}
-      </button>
-      <button onclick={nextTrack} disabled={currentTrackIndex === data.tracks.length - 1} class="nav-btn">Next →</button>
     </div>
   </div>
 </main>
@@ -223,48 +280,37 @@
     pointer-events: auto;
   }
 
-  .player-section {
+  .player-controls {
     max-width: 500px;
-    margin: 0 auto 20px;
+    margin: 0 auto 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     background: #d2d2d2;
+    padding: 20px;
+    border-radius: 4px;
   }
 
-  .current-track {
-    padding: 20px;
+  .now-playing {
     text-align: center;
   }
 
-  .current-track h3 {
-    margin: 0 0 10px 0;
-    color: black;
+  .now-playing-title {
     font-weight: 700;
+    color: black;
+    font-size: 1rem;
   }
 
-  .current-track p {
-    margin: 0 0 15px 0;
-    color: #666;
-  }
-
-  .bandcamp-embed {
-    width: 100%;
-    height: 42px;
-    border: 0;
-    border-radius: 0;
-    outline: none;
-    background: #d2d2d2;
-  }
-
-  .player-controls {
-    max-width: 500px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+  .now-playing-artist {
+    color: #555;
+    font-style: italic;
+    margin-left: 4px;
+    font-size: 0.95rem;
   }
 
   .track-info {
     text-align: center;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: #666;
   }
 
@@ -297,7 +343,8 @@
   }
 
   .play-all-btn {
-    background: #d2d2d2;
+    background: #f0f0f0;
+    min-width: 90px;
   }
 
   .play-all-btn.active {
@@ -307,7 +354,7 @@
 
   .track-list {
     max-width: 500px;
-    margin: 30px auto 0;
+    margin: 0 auto;
     text-align: center;
   }
 
@@ -388,15 +435,6 @@
 
     button {
       width: 100%;
-    }
-
-    .track-list {
-      margin: 20px auto 0;
-    }
-
-    .track-item {
-      padding: 6px 8px;
-      font-size: 0.9rem;
     }
   }
 </style>
