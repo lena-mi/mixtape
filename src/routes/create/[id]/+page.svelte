@@ -77,34 +77,39 @@
   {#each data.tracks as track}
     {@const embedUrl = `https://bandcamp.com/EmbeddedPlayer/url=${encodeURIComponent(track.source_url)}/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/transparent=true/`}
     <div style="padding: 8px 0; border-bottom: 1px solid #eee;">
-        <div style="display: flex; align-items: center; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
         <button
-            type="button"
-            onclick={() => playingId = playingId === track.id ? null : track.id}
-            style="background: none; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 12px;"
+          type="button"
+          onclick={() => playingId = playingId === track.id ? null : track.id}
+          style="background: none; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 12px;"
         >
-            {playingId === track.id ? '■' : '▶'}
+          {playingId === track.id ? '■' : '▶'}
         </button>
         <strong style="flex: 1;">{track.title}</strong>
         {#if track.artist}<span style="color: gray;">{track.artist}</span>{/if}
         <form method="POST" action="?/deleteTrack">
-        <input type="hidden" name="id" value={track.id} />
-        <button
+          <input type="hidden" name="id" value={track.id} />
+          <button
             type="submit"
             style="background: none; border: none; cursor: pointer; color: #ccc; font-size: 16px; padding: 0 4px;"
-        >
+          >
             ×
-        </button>
+          </button>
         </form>
-        </div>
-        {#if playingId === track.id}
+      </div>
+      {#if playingId === track.id}
         <iframe
-            src={embedUrl}
-            style="border: 0; width: 100%; height: 120px; margin-top: 8px;"
-            seamless
-            title={track.title}
+          src={embedUrl}
+          style="border: 0; width: 100%; height: 120px; margin-top: 8px;"
+          seamless
+          title={track.title}
         ></iframe>
-        {/if}
+      {/if}
     </div>
-    {/each}
+  {/each}
+
+  <hr />
+  <a href="/tape/{data.tape.id}">
+    <button>Share this tape →</button>
+  </a>
 </main>
