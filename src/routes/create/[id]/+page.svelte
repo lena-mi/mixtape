@@ -45,29 +45,46 @@
 
     loading = true
 
-    const formData = new FormData()
-    formData.append('youtube_id', videoId)
-    formData.append('youtube_url', `https://www.youtube.com/watch?v=${videoId}`)
-    formData.append('title', trackTitle.trim())
-    formData.append('artist', trackArtist.trim())
+    try {
+      const formData = new FormData()
+      formData.append('youtube_id', videoId)
+      formData.append('youtube_url', `https://www.youtube.com/watch?v=${videoId}`)
+      formData.append('title', trackTitle.trim())
+      formData.append('artist', trackArtist.trim())
 
-    const response = await fetch(`?/addTrack`, {
-      method: 'POST',
-      body: formData
-    })
+      console.log('Submitting form with:', { videoId, title: trackTitle.trim(), artist: trackArtist.trim() })
 
-    if (response.ok) {
-      // Reset form
-      youtubeUrl = ''
-      trackTitle = ''
-      trackArtist = ''
-      location.reload()
-    } else {
-      const errorData = await response.json()
-      inputError = errorData.error || 'Failed to add track'
+      const response = await fetch(`?/addTrack`, {
+        method: 'POST',
+        body: formData
+      })
+
+      console.log('Response status:', response.status)
+      const responseText = await response.text()
+      console.log('Response text:', responseText)
+
+      if (response.ok) {
+        // Reset form
+        youtubeUrl = ''
+        trackTitle = ''
+        trackArtist = ''
+        console.log('Track added successfully, reloading...')
+        location.reload()
+      } else {
+        try {
+          const errorData = JSON.parse(responseText)
+          inputError = errorData.error || `Error: ${response.status}`
+        } catch {
+          inputError = `Error: ${response.status} - ${responseText.substring(0, 100)}`
+        }
+        console.error('Failed to add track:', inputError)
+      }
+    } catch (err) {
+      inputError = `Network error: ${err}`
+      console.error('Network error:', err)
+    } finally {
+      loading = false
     }
-
-    loading = false
   }
 </script>
 
