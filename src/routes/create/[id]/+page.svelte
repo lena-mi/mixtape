@@ -154,9 +154,9 @@
         </form>
       </div>
       {#if playingId === track.id}
-        {#if track.file_path}
+        {#if track.storage_path}
           <audio
-            src={track.file_path}
+            src={track.storage_path}
             controls
             style="width: 100%; margin-top: 8px;"
             title={track.title}

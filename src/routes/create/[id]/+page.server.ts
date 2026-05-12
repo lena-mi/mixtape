@@ -82,7 +82,7 @@ export const actions: Actions = {
         tape_id: params.id,
         title,
         artist,
-        file_path: relativePath,
+        storage_path: relativePath,
         source_type: 'upload',
         position: count ?? 0
       })

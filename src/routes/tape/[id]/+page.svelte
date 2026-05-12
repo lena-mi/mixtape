@@ -99,10 +99,10 @@
           <p>by {data.tracks[currentTrackIndex].artist}</p>
         {/if}
 
-        {#if data.tracks[currentTrackIndex].file_path}
+        {#if data.tracks[currentTrackIndex].storage_path}
           <audio
             bind:this={audioElement}
-            src={data.tracks[currentTrackIndex].file_path}
+            src={data.tracks[currentTrackIndex].storage_path}
             controls
             onended={() => isPlayingAll ? nextTrack() : null}
           ></audio>
