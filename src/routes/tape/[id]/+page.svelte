@@ -91,6 +91,21 @@
     </div>
   </div>
 
+  <div class="track-list">
+    <h3>Tracklist</h3>
+    <ol class="tracks">
+      {#each data.tracks as track, index}
+        <li class="track-item" class:active={index === currentTrackIndex} onclick={() => currentTrackIndex = index}>
+          <span class="track-number">{index + 1}.</span>
+          <span class="track-title">{track.title}</span>
+          {#if track.artist}
+            <span class="track-artist">— {track.artist}</span>
+          {/if}
+        </li>
+      {/each}
+    </ol>
+  </div>
+
   <div class="player-section">
     {#if data.tracks[currentTrackIndex]}
       <div class="current-track">
@@ -286,6 +301,62 @@
     color: white;
   }
 
+  .track-list {
+    max-width: 500px;
+    margin: 30px auto 0;
+    text-align: center;
+  }
+
+  .track-list h3 {
+    margin: 0 0 15px 0;
+    color: black;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .tracks {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+  }
+
+  .track-item {
+    padding: 8px 12px;
+    margin: 4px 0;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .track-item:hover {
+    background-color: #f5f5f5;
+  }
+
+  .track-item.active {
+    background-color: #d2d2d2;
+    font-weight: 600;
+  }
+
+  .track-number {
+    color: #666;
+    font-weight: 500;
+    min-width: 24px;
+  }
+
+  .track-title {
+    flex: 1;
+    color: black;
+  }
+
+  .track-artist {
+    color: #666;
+    font-style: italic;
+  }
+
   @media (max-width: 768px) {
     .tape-title {
       font-size: 1.5rem;
@@ -305,6 +376,15 @@
 
     button {
       width: 100%;
+    }
+
+    .track-list {
+      margin: 20px auto 0;
+    }
+
+    .track-item {
+      padding: 6px 8px;
+      font-size: 0.9rem;
     }
   }
 </style>
