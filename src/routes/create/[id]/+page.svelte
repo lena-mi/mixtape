@@ -2,42 +2,65 @@
   import type { PageData, ActionData } from './$types'
   let { data, form }: { data: PageData, form: ActionData } = $props()
 
-  let bandcampUrl = $state('')
+  let selectedFile: File | null = $state(null)
+  let trackTitle = $state('')
+  let trackArtist = $state('')
   let loading = $state(false)
   let inputError = $state('')
   let playingId = $state<string | null>(null)
 
+  function handleFileSelect(event: Event) {
+    const target = event.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (file) {
+      selectedFile = file
+      // Auto-fill title from filename if empty
+      if (!trackTitle) {
+        trackTitle = file.name.replace(/\.[^/.]+$/, '') // Remove extension
+      }
+    }
+  }
+
   async function addTrack() {
     inputError = ''
 
-    const isTrack = bandcampUrl.includes('/track/')
-    const isAlbum = bandcampUrl.includes('/album/')
+    if (!selectedFile) {
+      inputError = 'Please select an audio file'
+      return
+    }
 
-    if (!bandcampUrl.includes('bandcamp.com') || (!isTrack && !isAlbum)) {
-      inputError = 'Please paste a Bandcamp track or album URL'
+    if (!trackTitle.trim()) {
+      inputError = 'Please enter a track title'
       return
     }
 
     loading = true
 
-    const encoded = encodeURIComponent(bandcampUrl)
-    const res = await fetch(`/api/bandcamp-oembed?url=${encoded}`)
-    const meta = await res.json()
-
     const formData = new FormData()
-    formData.append('source_url', bandcampUrl)
-    formData.append('source_type', 'bandcamp')
-    formData.append('title', meta.title ?? 'Untitled')
-    formData.append('artist', meta.artist ?? '')
+    formData.append('audio_file', selectedFile)
+    formData.append('title', trackTitle.trim())
+    formData.append('artist', trackArtist.trim())
 
-    await fetch(`?/addTrack`, {
+    const response = await fetch(`?/addTrack`, {
       method: 'POST',
       body: formData
     })
 
-    bandcampUrl = ''
+    if (response.ok) {
+      // Reset form
+      selectedFile = null
+      trackTitle = ''
+      trackArtist = ''
+      // Reset file input
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+      if (fileInput) fileInput.value = ''
+      location.reload()
+    } else {
+      const errorData = await response.json()
+      inputError = errorData.error || 'Failed to add track'
+    }
+
     loading = false
-    location.reload()
   }
 </script>
 
@@ -50,16 +73,50 @@
   <hr />
   <h2>Add a track</h2>
 
-  <div style="display: flex; gap: 8px;">
-    <input
-      type="text"
-      bind:value={bandcampUrl}
-      placeholder="https://artist.bandcamp.com/track/..."
-      disabled={loading}
-      style="flex: 1; padding: 8px; box-sizing: border-box;"
-    />
-    <button type="button" onclick={addTrack} disabled={loading}>
-      {loading ? 'Adding...' : 'Add'}
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div>
+      <label for="audio_file" style="display: block; margin-bottom: 4px; font-weight: bold;">Audio file</label>
+      <input
+        type="file"
+        id="audio_file"
+        accept="audio/*"
+        on:change={handleFileSelect}
+        disabled={loading}
+        style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;"
+      />
+    </div>
+
+    <div>
+      <label for="title" style="display: block; margin-bottom: 4px; font-weight: bold;">Track title</label>
+      <input
+        type="text"
+        id="title"
+        bind:value={trackTitle}
+        placeholder="Enter track title"
+        disabled={loading}
+        style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;"
+      />
+    </div>
+
+    <div>
+      <label for="artist" style="display: block; margin-bottom: 4px; font-weight: bold;">Artist (optional)</label>
+      <input
+        type="text"
+        id="artist"
+        bind:value={trackArtist}
+        placeholder="Enter artist name"
+        disabled={loading}
+        style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;"
+      />
+    </div>
+
+    <button
+      type="button"
+      onclick={addTrack}
+      disabled={loading || !selectedFile}
+      style="padding: 10px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"
+    >
+      {loading ? 'Adding...' : 'Add Track'}
     </button>
   </div>
 
@@ -75,7 +132,6 @@
   {/if}
 
   {#each data.tracks as track}
-    {@const embedUrl = `https://bandcamp.com/EmbeddedPlayer/url=${encodeURIComponent(track.source_url)}/size=large/bgcol=ffffff/linkcol=0687f5/tracklist=false/transparent=true/`}
     <div style="padding: 8px 0; border-bottom: 1px solid #eee;">
       <div style="display: flex; align-items: center; gap: 8px;">
         <button
@@ -98,12 +154,16 @@
         </form>
       </div>
       {#if playingId === track.id}
-        <iframe
-          src={embedUrl}
-          style="border: 0; width: 100%; height: 120px; margin-top: 8px;"
-          seamless
-          title={track.title}
-        ></iframe>
+        {#if track.file_path}
+          <audio
+            src={track.file_path}
+            controls
+            style="width: 100%; margin-top: 8px;"
+            title={track.title}
+          ></audio>
+        {:else}
+          <p style="color: red; margin-top: 8px;">File not found</p>
+        {/if}
       {/if}
     </div>
   {/each}

@@ -4,9 +4,70 @@
 
   let { data }: { data: PageData } = $props()
 
-  function getEmbedUrl(url: string) {
-    const encoded = encodeURIComponent(url)
-    return `https://bandcamp.com/EmbeddedPlayer/url=${encoded}/size=small/bgcol=d2d2d2/linkcol=0687f5/transparent=true/`
+  let currentTrackIndex = $state(0)
+  let isPlayingAll = $state(false)
+  let durationTimer: ReturnType<typeof setTimeout> | null = null
+  let audioElement: HTMLAudioElement | null = null
+
+  function startDurationTimer() {
+    // Clear any existing timer
+    if (durationTimer) {
+      clearTimeout(durationTimer)
+      durationTimer = null
+    }
+
+    if (!isPlayingAll) return
+
+    const currentTrack = data.tracks[currentTrackIndex]
+    if (!currentTrack) return
+
+    // Duration is stored in seconds, convert to milliseconds
+    const durationMs = (currentTrack.duration || 180) * 1000
+
+    durationTimer = setTimeout(() => {
+      nextTrack()
+      startDurationTimer() // Restart timer for next track
+    }, durationMs)
+  }
+
+  function nextTrack() {
+    if (currentTrackIndex < data.tracks.length - 1) {
+      currentTrackIndex++
+    } else if (isPlayingAll) {
+      // Loop back to start when reaching the end in Play All mode
+      currentTrackIndex = 0
+    }
+  }
+
+  function prevTrack() {
+    if (currentTrackIndex > 0) {
+      currentTrackIndex--
+    }
+    // Clear and restart timer when manually navigating
+    if (durationTimer) {
+      clearTimeout(durationTimer)
+      durationTimer = null
+    }
+  }
+
+  function togglePlayAll() {
+    isPlayingAll = !isPlayingAll
+
+    if (isPlayingAll) {
+      startDurationTimer()
+    } else {
+      // Stop auto-advance
+      if (durationTimer) {
+        clearTimeout(durationTimer)
+        durationTimer = null
+      }
+    }
+  }
+
+  function playCurrentTrack() {
+    if (audioElement) {
+      audioElement.play()
+    }
   }
 </script>
 
@@ -30,22 +91,40 @@
     </div>
   </div>
 
-  <span class="players-section">
-    {#each data.tracks as track}
-      {#if track.source_type === 'bandcamp' && track.source_url}
-        <div class="track-player">
-          <div class="bandcamp-player-frame">
-            <iframe
-              src={getEmbedUrl(track.source_url)}
-              class="bandcamp-embed"
-              allowfullscreen
-              title={track.title}
-            ></iframe>
-          </div>
-        </div>
-      {/if}
-    {/each}
-  </span>
+  <div class="player-section">
+    {#if data.tracks[currentTrackIndex]}
+      <div class="current-track">
+        <h3>{data.tracks[currentTrackIndex].title}</h3>
+        {#if data.tracks[currentTrackIndex].artist}
+          <p>by {data.tracks[currentTrackIndex].artist}</p>
+        {/if}
+
+        {#if data.tracks[currentTrackIndex].file_path}
+          <audio
+            bind:this={audioElement}
+            src={data.tracks[currentTrackIndex].file_path}
+            controls
+            on:ended={() => isPlayingAll ? nextTrack() : null}
+          ></audio>
+        {:else}
+          <p>File not available</p>
+        {/if}
+      </div>
+    {/if}
+  </div>
+
+  <div class="player-controls">
+    <div class="track-info">
+      Track {currentTrackIndex + 1} of {data.tracks.length}
+    </div>
+    <div class="control-buttons">
+      <button on:click={prevTrack} disabled={currentTrackIndex === 0} class="nav-btn">← Previous</button>
+      <button on:click={togglePlayAll} class="play-all-btn" class:active={isPlayingAll}>
+        {isPlayingAll ? 'Stop Play All' : 'Play All'}
+      </button>
+      <button on:click={nextTrack} disabled={currentTrackIndex === data.tracks.length - 1} class="nav-btn">Next →</button>
+    </div>
+  </div>
 </main>
 
 <style>
@@ -104,53 +183,91 @@
 
   .track-label {
     position: absolute;
-    left: 13%;    margin-top: 12px;    color: black;
+    left: 13%;
+    margin-top: 12px;
+    color: black;
     font-size: 0.9rem;
     font-weight: 500;
     white-space: nowrap;
     pointer-events: auto;
   }
 
-  .players-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+  .player-section {
+    max-width: 500px;
+    margin: 0 auto 20px;
+    background: #d2d2d2;
+  }
+
+  .current-track {
+    padding: 20px;
+    text-align: center;
+  }
+
+  .current-track h3 {
+    margin: 0 0 10px 0;
+    color: black;
+    font-weight: 700;
+  }
+
+  .current-track p {
+    margin: 0 0 15px 0;
+    color: #666;
+  }
+
+  audio {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .player-controls {
     max-width: 500px;
     margin: 0 auto;
-    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .track-info {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #666;
+  }
+
+  .control-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  button {
+    padding: 8px 16px;
+    border: 1px solid black;
+    background: white;
+    color: black;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  button:hover:not(:disabled) {
+    background: black;
+    color: white;
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .play-all-btn {
     background: #d2d2d2;
   }
 
-  .track-player {
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    box-shadow: none;
-    outline: none;
-    margin: 0;
-  }
-
-  .bandcamp-player-frame {
-    max-width: 700px;
-    width: 100%;
-    height: 42px;
-    position: relative;
-    border: none;
-    background: #d2d2d2;
-  }
-
-  .bandcamp-embed {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-    border-radius: 0;
-    outline: none;
-    background: transparent;
-    display: block;
+  .play-all-btn.active {
+    background: black;
+    color: white;
   }
 
   @media (max-width: 768px) {
@@ -164,6 +281,14 @@
 
     .cassette-image {
       max-width: 400px;
+    }
+
+    .control-buttons {
+      flex-direction: column;
+    }
+
+    button {
+      width: 100%;
     }
   }
 </style>
