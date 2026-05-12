@@ -119,11 +119,11 @@
           <p>by {data.tracks[currentTrackIndex].artist}</p>
         {/if}
 
-        {#if data.tracks[currentTrackIndex].source_type === 'bandcamp' && data.tracks[currentTrackIndex].youtube_id}
+        {#if data.tracks[currentTrackIndex].source_type === 'bandcamp' && data.tracks[currentTrackIndex].storage_path}
           <iframe
             width="100%"
             height="200"
-            src="https://www.youtube.com/embed/{data.tracks[currentTrackIndex].youtube_id}"
+            src="https://www.youtube.com/embed/{data.tracks[currentTrackIndex].storage_path}"
             title={data.tracks[currentTrackIndex].title}
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

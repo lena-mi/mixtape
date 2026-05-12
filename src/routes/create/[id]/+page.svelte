@@ -178,11 +178,11 @@
         </form>
       </div>
       {#if playingId === track.id}
-        {#if track.youtube_id}
+        {#if track.storage_path}
           <iframe
             width="100%"
             height="120"
-            src="https://www.youtube.com/embed/{track.youtube_id}"
+            src="https://www.youtube.com/embed/{track.storage_path}"
             title={track.title}
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

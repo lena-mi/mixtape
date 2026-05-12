@@ -55,7 +55,7 @@ export const actions: Actions = {
           tape_id: params.id,
           title,
           artist,
-          youtube_id: youtubeId,
+          storage_path: youtubeId,
           source_url: youtubeUrl,
           source_type: 'bandcamp',
           position: count ?? 0
