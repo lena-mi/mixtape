@@ -99,13 +99,20 @@
           <p>by {data.tracks[currentTrackIndex].artist}</p>
         {/if}
 
-        {#if data.tracks[currentTrackIndex].storage_path}
+        {#if data.tracks[currentTrackIndex].source_type === 'upload' && data.tracks[currentTrackIndex].storage_path}
           <audio
             bind:this={audioElement}
             src={data.tracks[currentTrackIndex].storage_path}
             controls
             onended={() => isPlayingAll ? nextTrack() : null}
           ></audio>
+        {:else if data.tracks[currentTrackIndex].source_type === 'bandcamp' && data.tracks[currentTrackIndex].source_url}
+          <iframe
+            src="https://bandcamp.com/EmbeddedPlayer/url={encodeURIComponent(data.tracks[currentTrackIndex].source_url)}/size=small/bgcol=d2d2d2/linkcol=0687f5/transparent=true/"
+            class="bandcamp-embed"
+            allowfullscreen
+            title={data.tracks[currentTrackIndex].title}
+          ></iframe>
         {:else}
           <p>File not available</p>
         {/if}
@@ -217,6 +224,15 @@
   audio {
     width: 100%;
     max-width: 400px;
+  }
+
+  .bandcamp-embed {
+    width: 100%;
+    height: 42px;
+    border: 0;
+    border-radius: 0;
+    outline: none;
+    background: #d2d2d2;
   }
 
   .player-controls {
