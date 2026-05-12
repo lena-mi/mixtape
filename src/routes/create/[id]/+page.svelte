@@ -2,30 +2,33 @@
   import type { PageData, ActionData } from './$types'
   let { data, form }: { data: PageData, form: ActionData } = $props()
 
-  let selectedFile: File | null = $state(null)
+  let youtubeUrl = $state('')
   let trackTitle = $state('')
   let trackArtist = $state('')
   let loading = $state(false)
   let inputError = $state('')
   let playingId = $state<string | null>(null)
 
-  function handleFileSelect(event: Event) {
-    const target = event.target as HTMLInputElement
-    const file = target.files?.[0]
-    if (file) {
-      selectedFile = file
-      // Auto-fill title from filename if empty
-      if (!trackTitle) {
-        trackTitle = file.name.replace(/\.[^/.]+$/, '') // Remove extension
-      }
+  function extractYoutubeVideoId(url: string): string | null {
+    // Handle youtube.com, youtu.be, and youtube-nocookie.com
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube-nocookie\.com\/embed\/)([^&\n?#]+)/,
+      /^([a-zA-Z0-9_-]{11})$/ // Just the ID
+    ]
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern)
+      if (match) return match[1]
     }
+    
+    return null
   }
 
   async function addTrack() {
     inputError = ''
 
-    if (!selectedFile) {
-      inputError = 'Please select an audio file'
+    if (!youtubeUrl.trim()) {
+      inputError = 'Please enter a YouTube URL or video ID'
       return
     }
 
@@ -34,10 +37,17 @@
       return
     }
 
+    const videoId = extractYoutubeVideoId(youtubeUrl.trim())
+    if (!videoId) {
+      inputError = 'Please enter a valid YouTube URL or video ID'
+      return
+    }
+
     loading = true
 
     const formData = new FormData()
-    formData.append('audio_file', selectedFile)
+    formData.append('youtube_id', videoId)
+    formData.append('youtube_url', `https://www.youtube.com/watch?v=${videoId}`)
     formData.append('title', trackTitle.trim())
     formData.append('artist', trackArtist.trim())
 
@@ -48,12 +58,9 @@
 
     if (response.ok) {
       // Reset form
-      selectedFile = null
+      youtubeUrl = ''
       trackTitle = ''
       trackArtist = ''
-      // Reset file input
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      if (fileInput) fileInput.value = ''
       location.reload()
     } else {
       const errorData = await response.json()
@@ -75,12 +82,12 @@
 
   <div style="display: flex; flex-direction: column; gap: 12px;">
     <div>
-      <label for="audio_file" style="display: block; margin-bottom: 4px; font-weight: bold;">Audio file</label>
+      <label for="youtube_url" style="display: block; margin-bottom: 4px; font-weight: bold;">YouTube URL or Video ID</label>
       <input
-        type="file"
-        id="audio_file"
-        accept="audio/*"
-        onchange={handleFileSelect}
+        type="text"
+        id="youtube_url"
+        bind:value={youtubeUrl}
+        placeholder="https://youtube.com/watch?v=... or dQw4w9WgXcQ"
         disabled={loading}
         style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;"
       />
@@ -113,7 +120,7 @@
     <button
       type="button"
       onclick={addTrack}
-      disabled={loading || !selectedFile}
+      disabled={loading || !youtubeUrl.trim()}
       style="padding: 10px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"
     >
       {loading ? 'Adding...' : 'Add Track'}
@@ -154,15 +161,19 @@
         </form>
       </div>
       {#if playingId === track.id}
-        {#if track.storage_path}
-          <audio
-            src={track.storage_path}
-            controls
-            style="width: 100%; margin-top: 8px;"
+        {#if track.youtube_id}
+          <iframe
+            width="100%"
+            height="120"
+            src="https://www.youtube.com/embed/{track.youtube_id}"
             title={track.title}
-          ></audio>
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+            style="margin-top: 8px; border-radius: 4px;"
+          ></iframe>
         {:else}
-          <p style="color: red; margin-top: 8px;">File not found</p>
+          <p style="color: red; margin-top: 8px;">Video not found</p>
         {/if}
       {/if}
     </div>

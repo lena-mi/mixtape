@@ -119,13 +119,17 @@
           <p>by {data.tracks[currentTrackIndex].artist}</p>
         {/if}
 
-        {#if data.tracks[currentTrackIndex].source_type === 'upload' && data.tracks[currentTrackIndex].storage_path}
-          <audio
-            bind:this={audioElement}
-            src={data.tracks[currentTrackIndex].storage_path}
-            controls
-            onended={() => isPlayingAll ? nextTrack() : null}
-          ></audio>
+        {#if data.tracks[currentTrackIndex].source_type === 'bandcamp' && data.tracks[currentTrackIndex].youtube_id}
+          <iframe
+            width="100%"
+            height="200"
+            src="https://www.youtube.com/embed/{data.tracks[currentTrackIndex].youtube_id}"
+            title={data.tracks[currentTrackIndex].title}
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+            style="border-radius: 4px; margin: 10px 0;"
+          ></iframe>
         {:else if data.tracks[currentTrackIndex].source_type === 'bandcamp' && data.tracks[currentTrackIndex].source_url}
           <iframe
             src="https://bandcamp.com/EmbeddedPlayer/url={encodeURIComponent(data.tracks[currentTrackIndex].source_url)}/size=small/bgcol=d2d2d2/linkcol=0687f5/transparent=true/"
@@ -239,11 +243,6 @@
   .current-track p {
     margin: 0 0 15px 0;
     color: #666;
-  }
-
-  audio {
-    width: 100%;
-    max-width: 400px;
   }
 
   .bandcamp-embed {
