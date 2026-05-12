@@ -7,7 +7,7 @@
   let currentTrackIndex = $state(0)
   let isPlayingAll = $state(false)
   let durationTimer: ReturnType<typeof setTimeout> | null = null
-  let audioElement: HTMLAudioElement | null = null
+  let audioElement = $state<HTMLAudioElement | null>(null)
 
   function startDurationTimer() {
     // Clear any existing timer
@@ -104,7 +104,7 @@
             bind:this={audioElement}
             src={data.tracks[currentTrackIndex].file_path}
             controls
-            on:ended={() => isPlayingAll ? nextTrack() : null}
+            onended={() => isPlayingAll ? nextTrack() : null}
           ></audio>
         {:else}
           <p>File not available</p>
@@ -118,11 +118,11 @@
       Track {currentTrackIndex + 1} of {data.tracks.length}
     </div>
     <div class="control-buttons">
-      <button on:click={prevTrack} disabled={currentTrackIndex === 0} class="nav-btn">← Previous</button>
-      <button on:click={togglePlayAll} class="play-all-btn" class:active={isPlayingAll}>
+      <button onclick={prevTrack} disabled={currentTrackIndex === 0} class="nav-btn">← Previous</button>
+      <button onclick={togglePlayAll} class="play-all-btn" class:active={isPlayingAll}>
         {isPlayingAll ? 'Stop Play All' : 'Play All'}
       </button>
-      <button on:click={nextTrack} disabled={currentTrackIndex === data.tracks.length - 1} class="nav-btn">Next →</button>
+      <button onclick={nextTrack} disabled={currentTrackIndex === data.tracks.length - 1} class="nav-btn">Next →</button>
     </div>
   </div>
 </main>

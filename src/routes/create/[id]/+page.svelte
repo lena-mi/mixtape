@@ -80,7 +80,7 @@
         type="file"
         id="audio_file"
         accept="audio/*"
-        on:change={handleFileSelect}
+        onchange={handleFileSelect}
         disabled={loading}
         style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;"
       />
