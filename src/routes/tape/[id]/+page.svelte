@@ -10,6 +10,9 @@
   let isLoaded = $state(false)
   let player: any = null
 
+  const midpoint = $derived(Math.ceil(data.tracks.length / 2))
+  const currentSide = $derived(currentTrackIndex < midpoint ? 'A' : 'B')
+
   function extractYoutubeId(url: string): string {
     const patterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube-nocookie\.com\/embed\/)([^&\n?#]+)/,
@@ -45,51 +48,45 @@
     }
   }
 
-  function playAll() {
+  function play() {
     if (!player) return
     isPlaying = true
     player.playVideo()
   }
 
-  function stopAll() {
+  function stop() {
     if (!player) return
     isPlaying = false
     player.pauseVideo()
   }
 
-  function togglePlayAll() {
-    if (isPlaying) {
-      stopAll()
-    } else {
-      playAll()
+  function next() {
+    const nextIdx = currentTrackIndex + 1
+    if (nextIdx < data.tracks.length) {
+      goToTrack(nextIdx)
+    } else if (isPlaying) {
+      currentTrackIndex = 0
+      const videoId = getVideoId(0)
+      if (player && videoId) player.loadVideoById(videoId)
     }
   }
 
-  function nextTrack() {
-    const next = currentTrackIndex + 1
-    if (next < data.tracks.length) {
-      goToTrack(next)
-    } else {
-      // Loop back to start when playing
-      if (isPlaying) {
-        currentTrackIndex = 0
-        const videoId = getVideoId(0)
-        if (player && videoId) player.loadVideoById(videoId)
-      }
-    }
-  }
-
-  function prevTrack() {
+  function prev() {
     if (currentTrackIndex > 0) goToTrack(currentTrackIndex - 1)
   }
 
+  function switchSide() {
+    const targetIndex = currentSide === 'A' ? midpoint : 0
+    if (targetIndex >= data.tracks.length) return
+    goToTrack(targetIndex)
+  }
+
   function onYoutubeStateChange(event: any) {
-    // 0 = ENDED, 1 = PLAYING, 2 = PAUSED, 3 = BUFFERING, 5 = CUED
     if (event.data === 0 && isPlaying) {
-      const next = currentTrackIndex + 1
-      if (next < data.tracks.length) {
-        currentTrackIndex = next
-        const videoId = getVideoId(next)
+      const nextIdx = currentTrackIndex + 1
+      if (nextIdx < data.tracks.length) {
+        currentTrackIndex = nextIdx
+        const videoId = getVideoId(nextIdx)
         if (player && videoId) player.loadVideoById(videoId)
       } else {
         isPlaying = false
@@ -109,14 +106,7 @@
         height: '1',
         width: '1',
         videoId: getVideoId(0),
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          playsinline: 1
-        },
+        playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1 },
         events: {
           onReady: () => { isLoaded = true },
           onStateChange: onYoutubeStateChange
@@ -135,13 +125,10 @@
       }
     }
 
-    return () => {
-      if (player?.destroy) player.destroy()
-    }
+    return () => { if (player?.destroy) player.destroy() }
   })
 </script>
 
-<!-- Hidden YouTube IFrame player — invisible but required in the DOM -->
 <div style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;" aria-hidden="true">
   <div id="youtube-player"></div>
 </div>
@@ -156,62 +143,45 @@
 
   <div class="cassette-container">
     <img src={cassette} alt="Cassette tape" class="cassette-image" />
-
-    <div class="tracks-overlay">
-      {#each data.tracks as track, index}
-        <div class="track-label" style="top: {20 + index * 15}%">
-          {track.title} — {track.artist}
-        </div>
-      {/each}
-    </div>
   </div>
 
   <div class="player-controls">
-    {#if data.tracks[currentTrackIndex]}
-      <div class="now-playing">
-        <span class="now-playing-title">{data.tracks[currentTrackIndex].title}</span>
-        {#if data.tracks[currentTrackIndex].artist}
-          <span class="now-playing-artist">— {data.tracks[currentTrackIndex].artist}</span>
-        {/if}
-      </div>
-    {/if}
-
-    <div class="track-info">
-      Track {currentTrackIndex + 1} of {data.tracks.length}
-    </div>
-
     <div class="control-buttons">
-      <button onclick={prevTrack} disabled={currentTrackIndex === 0} class="nav-btn">← Prev</button>
-      <button
-        onclick={togglePlayAll}
-        class="play-all-btn"
-        class:active={isPlaying}
-        disabled={!isLoaded}
-      >
-        {isPlaying ? 'Stop' : 'Play All'}
+      <button class="ctrl-btn" onclick={play} disabled={!isLoaded || isPlaying} aria-label="Play">▶</button>
+      <button class="ctrl-btn" onclick={prev} disabled={currentTrackIndex === 0} aria-label="Previous">⏮</button>
+      <button class="ctrl-btn stop-btn" onclick={stop} disabled={!isPlaying} aria-label="Stop">■</button>
+      <button class="ctrl-btn" onclick={next} disabled={currentTrackIndex === data.tracks.length - 1 && !isPlaying} aria-label="Next">⏭</button>
+      <button class="ctrl-btn side-btn" onclick={switchSide} disabled={!isLoaded || data.tracks.length < 2} aria-label="Switch side">
+        {currentSide === 'A' ? 'Side B' : 'Side A'}
       </button>
-      <button onclick={nextTrack} disabled={currentTrackIndex === data.tracks.length - 1 && !isPlaying} class="nav-btn">Next →</button>
     </div>
   </div>
 
   <div class="track-list">
-    <h3>Tracklist</h3>
-    <div class="tracks">
-      {#each data.tracks as track, index}
-        <button
-          type="button"
-          class="track-item"
-          class:active={index === currentTrackIndex}
-          onclick={() => goToTrack(index)}
-        >
-          <span class="track-number">{index + 1}.</span>
+    <div class="side-tracks">
+      <p class="side-label">Side A</p>
+      {#each data.tracks.slice(0, midpoint) as track, i}
+        <div class="track-item" class:active={i === currentTrackIndex}>
+          <span class="track-number">{i + 1}.</span>
           <span class="track-title">{track.title}</span>
-          {#if track.artist}
-            <span class="track-artist">— {track.artist}</span>
-          {/if}
-        </button>
+          {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
+        </div>
       {/each}
     </div>
+
+    {#if midpoint < data.tracks.length}
+      <hr class="side-divider" />
+      <div class="side-tracks">
+        <p class="side-label">Side B</p>
+        {#each data.tracks.slice(midpoint) as track, i}
+          <div class="track-item" class:active={midpoint + i === currentTrackIndex}>
+            <span class="track-number">{midpoint + i + 1}.</span>
+            <span class="track-title">{track.title}</span>
+            {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 </main>
 
@@ -244,12 +214,10 @@
   }
 
   .cassette-container {
-    position: relative;
     max-width: 600px;
-    margin: 0 auto 40px;
+    margin: 0 auto 32px;
     display: flex;
     justify-content: center;
-    align-items: center;
   }
 
   .cassette-image {
@@ -259,151 +227,107 @@
     display: block;
   }
 
-  .tracks-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  .track-label {
-    position: absolute;
-    left: 13%;
-    margin-top: 12px;
-    color: black;
-    font-size: 0.9rem;
-    font-weight: 500;
-    white-space: nowrap;
-    pointer-events: auto;
-  }
+  /* ── Controls ── */
 
   .player-controls {
     max-width: 500px;
-    margin: 0 auto 30px;
+    margin: 0 auto 32px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    background: #d2d2d2;
-    padding: 20px;
-    border-radius: 4px;
-  }
-
-  .now-playing {
-    text-align: center;
-  }
-
-  .now-playing-title {
-    font-weight: 700;
-    color: black;
-    font-size: 1rem;
-  }
-
-  .now-playing-artist {
-    color: #555;
-    font-style: italic;
-    margin-left: 4px;
-    font-size: 0.95rem;
-  }
-
-  .track-info {
-    text-align: center;
-    font-size: 0.85rem;
-    color: #666;
+    align-items: center;
   }
 
   .control-buttons {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     justify-content: center;
+    flex-wrap: nowrap;
   }
 
-  button {
-    padding: 8px 16px;
+  .ctrl-btn {
+    padding: 8px 14px;
     border: 1px solid black;
     background: white;
     color: black;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: all 0.2s;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
   }
 
-  button:hover:not(:disabled) {
+  .ctrl-btn:hover:not(:disabled) {
     background: black;
     color: white;
   }
 
-  button:disabled {
-    opacity: 0.5;
+  .ctrl-btn:disabled {
+    opacity: 0.4;
     cursor: not-allowed;
   }
 
-  .play-all-btn {
-    background: #f0f0f0;
-    min-width: 90px;
+  .stop-btn {
+    font-size: 0.85rem;
   }
 
-  .play-all-btn.active {
-    background: black;
-    color: white;
+  .side-btn {
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    padding: 8px 12px;
   }
+
+  /* ── Tracklist ── */
 
   .track-list {
     max-width: 500px;
     margin: 0 auto;
-    text-align: center;
-  }
-
-  .track-list h3 {
-    margin: 0 0 15px 0;
-    color: black;
-    font-size: 1.2rem;
-    font-weight: 600;
-  }
-
-  .tracks {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 0;
-    margin: 0;
+    gap: 0;
+  }
+
+  .side-label {
+    margin: 0 0 6px 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #999;
+  }
+
+  .side-divider {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 12px 0;
+  }
+
+  .side-tracks {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
   .track-item {
-    padding: 8px 12px;
-    margin: 0;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s;
+    padding: 7px 12px;
     display: flex;
     align-items: center;
     gap: 8px;
+    border-radius: 4px;
     border: 1px solid transparent;
-    background: white;
-    text-align: left;
-    font-family: inherit;
-    font-size: inherit;
+    user-select: none;
+    pointer-events: none;
   }
 
-  .track-item:hover {
-    background-color: #f5f5f5;
-    border-color: #ddd;
-  }
-
-  .track-item.active {
-    background-color: #d2d2d2;
-    border-color: #999;
-    font-weight: 600;
+  .track-item.active .track-title {
+    font-weight: 700;
   }
 
   .track-number {
-    color: #666;
+    color: #999;
     font-weight: 500;
     min-width: 24px;
+    font-size: 0.85rem;
   }
 
   .track-title {
@@ -414,27 +338,19 @@
   .track-artist {
     color: #666;
     font-style: italic;
+    font-size: 0.9rem;
   }
 
-  @media (max-width: 768px) {
-    .tape-title {
-      font-size: 1.5rem;
+  @media (max-width: 500px) {
+    .tape-title { font-size: 1.5rem; }
+
+    .control-buttons { gap: 6px; }
+
+    .ctrl-btn {
+      padding: 8px 10px;
+      font-size: 0.9rem;
     }
 
-    .track-label {
-      font-size: 0.8rem;
-    }
-
-    .cassette-image {
-      max-width: 400px;
-    }
-
-    .control-buttons {
-      flex-direction: column;
-    }
-
-    button {
-      width: 100%;
-    }
+    .side-btn { font-size: 0.75rem; }
   }
 </style>
