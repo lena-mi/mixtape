@@ -168,17 +168,17 @@
 
     <div class="ds-group">
       <h3 class="ds-group-title">Processing</h3>
-      <TrackInput index={2} mockState="processing" />
+      <TrackInput index={2} initialState="processing" />
     </div>
 
     <div class="ds-group">
       <h3 class="ds-group-title">Filled</h3>
-      <TrackInput index={3} mockState="filled" mockTitle="Midnight City" mockArtist="M83" />
+      <TrackInput index={3} initialState="filled" initialTitle="Midnight City" initialArtist="M83" />
     </div>
 
     <div class="ds-group">
       <h3 class="ds-group-title">Renaming</h3>
-      <TrackInput index={4} mockState="renaming" mockTitle="Midnight City" mockArtist="M83" />
+      <TrackInput index={4} initialState="renaming" initialTitle="Midnight City" initialArtist="M83" />
     </div>
   </section>
 </main>

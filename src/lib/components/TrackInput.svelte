@@ -5,37 +5,37 @@
     index,
     oncommit,
     ondelete,
-    // DS-only: force a specific visual state for showcasing
-    mockState = undefined,
-    mockTitle = '',
-    mockArtist = '',
+    initialState = 'idle',
+    initialTitle = '',
+    initialArtist = '',
   }: {
     index: number
     oncommit?: (url: string) => Promise<{ title: string; artist: string }>
     ondelete?: () => void
-    mockState?: TrackState
-    mockTitle?: string
-    mockArtist?: string
+    initialState?: TrackState
+    initialTitle?: string
+    initialArtist?: string
   } = $props()
 
-  let state = $state<TrackState>(mockState ?? 'idle')
+  // Intentional one-time init from props — we own this state from here on
+  let trackState: TrackState = $state(initialState)
   let url = $state('')
-  let title = $state(mockTitle)
-  let artist = $state(mockArtist)
+  let title = $state(initialTitle)
+  let artist = $state(initialArtist)
   let renameValue = $state('')
 
   const displayText = $derived(artist ? `${title} — ${artist}` : title)
 
   async function confirm() {
     if (!url.trim() || !oncommit) return
-    state = 'processing'
+    trackState = 'processing'
     try {
       const result = await oncommit(url.trim())
       title = result.title
       artist = result.artist
-      state = 'filled'
+      trackState = 'filled'
     } catch {
-      state = 'idle'
+      trackState = 'idle'
     }
   }
 
@@ -48,12 +48,12 @@
     url = ''
     title = ''
     artist = ''
-    state = 'idle'
+    trackState = 'idle'
   }
 
   function startRenaming() {
     renameValue = displayText
-    state = 'renaming'
+    trackState = 'renaming'
   }
 
   function saveRename() {
@@ -65,12 +65,12 @@
       title = renameValue.trim()
       artist = ''
     }
-    state = 'filled'
+    trackState = 'filled'
   }
 
   function handleRenameKeydown(e: KeyboardEvent) {
     if (e.key === 'Enter') saveRename()
-    if (e.key === 'Escape') state = 'filled'
+    if (e.key === 'Escape') trackState = 'filled'
   }
 </script>
 
@@ -78,7 +78,7 @@
   <span class="track-label">Track {index}:</span>
 
   <div class="track-field">
-    {#if state === 'idle'}
+    {#if trackState === 'idle'}
       <input
         class="url-input"
         type="text"
@@ -88,10 +88,10 @@
         aria-label="YouTube URL for track {index}"
       />
 
-    {:else if state === 'processing'}
+    {:else if trackState === 'processing'}
       <div class="processing-line" aria-label="Processing…" aria-busy="true"></div>
 
-    {:else if state === 'filled'}
+    {:else if trackState === 'filled'}
       <button
         class="filled-text"
         onclick={resetToIdle}
@@ -99,7 +99,7 @@
       >{displayText}</button>
       <button class="rename-btn" onclick={startRenaming}>rename track</button>
 
-    {:else if state === 'renaming'}
+    {:else if trackState === 'renaming'}
       <input
         class="input rename-input"
         type="text"
@@ -108,7 +108,7 @@
         aria-label="Rename track {index}"
       />
       <button
-        class="delete-btn btn-icon"
+        class="delete-btn"
         onclick={ondelete}
         aria-label="Delete track {index}"
       >×</button>
