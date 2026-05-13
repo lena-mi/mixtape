@@ -1,13 +1,3 @@
-<script lang="ts">
-  import { supabase } from '$lib/supabase'
-  import { onMount } from 'svelte'
-
-  onMount(async () => {
-    const { data, error } = await supabase.from('tapes').select('*')
-    if (error) console.error('Supabase error:', error.message)
-    else console.log('Connected! Tapes:', data)
-  })
-</script>
 
 <main class="page">
   <h1 class="page-title">Mixtape</h1>

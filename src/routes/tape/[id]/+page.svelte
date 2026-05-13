@@ -13,27 +13,8 @@
   const midpoint = $derived(Math.ceil(data.tracks.length / 2))
   const currentSide = $derived(currentTrackIndex < midpoint ? 'A' : 'B')
 
-  function extractYoutubeId(url: string): string {
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube-nocookie\.com\/embed\/)([^&\n?#]+)/,
-      /^([a-zA-Z0-9_-]{11})$/
-    ]
-    for (const pattern of patterns) {
-      const match = url.match(pattern)
-      if (match) return match[1]
-    }
-    return ''
-  }
-
   function getVideoId(index: number): string {
-    const track = data.tracks[index]
-    if (!track) return ''
-    if (track.storage_path) {
-      if (/^[a-zA-Z0-9_-]{11}$/.test(track.storage_path)) return track.storage_path
-      return extractYoutubeId(track.storage_path)
-    }
-    if (track.source_url) return extractYoutubeId(track.source_url)
-    return ''
+    return data.tracks[index]?.storage_path ?? ''
   }
 
   function goToTrack(index: number) {

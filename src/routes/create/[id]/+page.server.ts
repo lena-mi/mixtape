@@ -31,8 +31,6 @@ export const actions: Actions = {
       const youtubeId = data.get('youtube_id') as string
       const youtubeUrl = data.get('youtube_url') as string
 
-      console.log('Adding track:', { title, artist, youtubeId, youtubeUrl })
-
       if (!title) {
         return fail(400, { error: 'Please add a track title' })
       }
@@ -47,9 +45,7 @@ export const actions: Actions = {
         .select('*', { count: 'exact', head: true })
         .eq('tape_id', params.id)
 
-      console.log('Current track count:', count)
-
-      const { data: insertedTrack, error: insertError } = await supabaseAdmin
+      const { error: insertError } = await supabaseAdmin
         .from('tracks')
         .insert({
           tape_id: params.id,
@@ -57,20 +53,16 @@ export const actions: Actions = {
           artist,
           storage_path: youtubeId,
           source_url: youtubeUrl,
-          source_type: 'bandcamp',
+          source_type: 'youtube',
           position: count ?? 0
         })
-        .select()
 
       if (insertError) {
-        console.error('Insert error:', insertError)
         return fail(500, { error: insertError.message })
       }
 
-      console.log('Track inserted successfully:', insertedTrack)
       return { success: true }
     } catch (err) {
-      console.error('Unexpected error:', err)
       return fail(500, { error: String(err) })
     }
   },
