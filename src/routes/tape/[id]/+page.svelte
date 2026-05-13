@@ -140,24 +140,23 @@
   </div>
 
   <div class="track-list">
-    <div class="side-tracks">
-      <p class="side-label">Side A</p>
-      {#each tracksA as track, i}
-        <button class="track-item" class:active={i === currentTrackIndex} onclick={() => goToTrack(i)}>
-          <span class="track-number">{i + 1}.</span>
-          <span class="track-title">{track.title}</span>
-          {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
-        </button>
-      {/each}
-    </div>
-
-    {#if tracksB.length > 0}
-      <hr class="side-divider" />
+    {#if currentSide === 'A'}
+      <div class="side-tracks">
+        <p class="side-label">Side A</p>
+        {#each tracksA as track, i}
+          <button class="track-item" class:active={i === currentTrackIndex} onclick={() => goToTrack(i)}>
+            <span class="track-number">{i + 1}.</span>
+            <span class="track-title">{track.title}</span>
+            {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
+          </button>
+        {/each}
+      </div>
+    {:else}
       <div class="side-tracks">
         <p class="side-label">Side B</p>
         {#each tracksB as track, i}
           <button class="track-item" class:active={midpoint + i === currentTrackIndex} onclick={() => goToTrack(midpoint + i)}>
-            <span class="track-number">{midpoint + i + 1}.</span>
+            <span class="track-number">{i + 1}.</span>
             <span class="track-title">{track.title}</span>
             {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
           </button>
@@ -245,11 +244,6 @@
     color: var(--color-gray-muted);
   }
 
-  .side-divider {
-    border: none;
-    border-top: 1px solid var(--color-gray-border);
-    margin: var(--space-3) 0;
-  }
 
   .track-item {
     padding: var(--space-2) var(--space-3);
