@@ -2,6 +2,7 @@
   import type { PageData } from './$types'
   import cassette from '$lib/assets/Casette-empty.png'
   import { onMount } from 'svelte'
+  import PlayerControls from '$lib/components/PlayerControls.svelte'
 
   let { data }: { data: PageData } = $props()
 
@@ -130,13 +131,19 @@
   </div>
 
   <div class="player-controls">
-    <button class="btn btn-outline" onclick={play} disabled={!isLoaded || isPlaying} aria-label="Play">▶</button>
-    <button class="btn btn-outline" onclick={prev} disabled={currentTrackIndex === 0} aria-label="Previous">⏮</button>
-    <button class="btn btn-outline" onclick={stop} disabled={!isPlaying} aria-label="Stop">■</button>
-    <button class="btn btn-outline" onclick={next} disabled={currentTrackIndex === data.tracks.length - 1 && !isPlaying} aria-label="Next">⏭</button>
-    <button class="btn btn-outline side-btn" onclick={switchSide} disabled={tracksB.length === 0}>
-      {currentSide === 'A' ? 'Side B' : 'Side A'}
-    </button>
+    <PlayerControls
+      onplay={play}
+      onstop={stop}
+      onnext={next}
+      onprev={prev}
+      onswitchside={switchSide}
+      {isPlaying}
+      {isLoaded}
+      canPrev={currentTrackIndex > 0}
+      canNext={currentTrackIndex < allTracks.length - 1 || isPlaying}
+      hasSideB={tracksB.length > 0}
+      {currentSide}
+    />
   </div>
 
   <div class="track-list">
@@ -215,11 +222,6 @@
     gap: var(--space-2);
     justify-content: center;
     flex-wrap: nowrap;
-  }
-
-  .side-btn {
-    font-size: var(--text-xs);
-    letter-spacing: var(--tracking-xs);
   }
 
   /* Tracklist */
