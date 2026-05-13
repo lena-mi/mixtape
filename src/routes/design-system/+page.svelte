@@ -1,5 +1,6 @@
 <script lang="ts">
   import TrackInput from '$lib/components/TrackInput.svelte'
+  import PlayerControls from '$lib/components/PlayerControls.svelte'
 </script>
 
 <main class="ds-page">
@@ -164,6 +165,63 @@
         <button class="btn btn-outline btn-icon" aria-label="Stop">■</button>
         <button class="btn btn-outline" disabled>Disabled</button>
       </div>
+    </div>
+  </section>
+
+  <!-- ── Player Controls ── -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">Player Controls</h2>
+    <p class="ds-description">Play button (red circle) + 4 separate metallic control buttons.</p>
+
+    <div class="ds-group">
+      <h3 class="ds-group-title">Default</h3>
+      <PlayerControls
+        onplay={() => {}}
+        onstop={() => {}}
+        onnext={() => {}}
+        onprev={() => {}}
+        onswitchside={() => {}}
+        isLoaded={true}
+        isPlaying={false}
+        canPrev={true}
+        canNext={true}
+        hasSideB={true}
+        currentSide="A"
+      />
+    </div>
+
+    <div class="ds-group">
+      <h3 class="ds-group-title">Playing</h3>
+      <PlayerControls
+        onplay={() => {}}
+        onstop={() => {}}
+        onnext={() => {}}
+        onprev={() => {}}
+        onswitchside={() => {}}
+        isLoaded={true}
+        isPlaying={true}
+        canPrev={true}
+        canNext={true}
+        hasSideB={true}
+        currentSide="A"
+      />
+    </div>
+
+    <div class="ds-group">
+      <h3 class="ds-group-title">Side B active</h3>
+      <PlayerControls
+        onplay={() => {}}
+        onstop={() => {}}
+        onnext={() => {}}
+        onprev={() => {}}
+        onswitchside={() => {}}
+        isLoaded={true}
+        isPlaying={false}
+        canPrev={false}
+        canNext={true}
+        hasSideB={true}
+        currentSide="B"
+      />
     </div>
   </section>
 
