@@ -22,6 +22,7 @@
   --color-gray-muted:     #999999;  /* track numbers, labels */
   --color-gray-border:    #dddddd;
   --color-gray-surface:   #d2d2d2;  /* cassette-gray bg */
+  --color-tape-bg:        #E2DDD7;  /* warm linen — track input area bg */
 
   /* Typography — font sizes (rem, base 16px) */
   --text-xs:   0.75rem;   /* 12px */

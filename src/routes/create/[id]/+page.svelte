@@ -10,22 +10,24 @@
     trackId?: string
     savedTitle?: string
     savedArtist?: string
+    locked?: boolean
   }
 
-  // Plain init — slots are independent UI state managed from here on;
-  // data.tracks only informs the initial render.
   const initialTracks = data.tracks
-  let keySeq = initialTracks.length + 1
+  let keySeq = Math.max(1, initialTracks.length) + 1
 
-  let slots = $state<Slot[]>([
-    ...initialTracks.map((t, i) => ({
-      key: i + 1,
-      trackId: t.id,
-      savedTitle: t.title,
-      savedArtist: t.artist ?? '',
-    })),
-    { key: keySeq++ },
-  ])
+  const firstSlot: Slot = initialTracks[0]
+    ? { key: 1, trackId: initialTracks[0].id, savedTitle: initialTracks[0].title, savedArtist: initialTracks[0].artist ?? '', locked: true }
+    : { key: 1, locked: true }
+
+  const restSlots: Slot[] = initialTracks.slice(1).map((t, i) => ({
+    key: i + 2,
+    trackId: t.id,
+    savedTitle: t.title,
+    savedArtist: t.artist ?? '',
+  }))
+
+  let slots = $state<Slot[]>([firstSlot, ...restSlots])
 
   function extractVideoId(url: string): string | null {
     const patterns = [
@@ -111,18 +113,35 @@
   </header>
 
   <div class="track-list">
-    {#each slots as slot (slot.key)}
-      <TrackInput
-        index={slots.indexOf(slot) + 1}
-        initialState={slot.savedTitle ? 'filled' : 'idle'}
-        initialTitle={slot.savedTitle ?? ''}
-        initialArtist={slot.savedArtist ?? ''}
-        oncommit={(url) => handleCommit(slot.key, url)}
-        ondelete={() => handleDelete(slot.key)}
-      />
-    {/each}
+    <div class="slots-container">
+      {#each slots as slot (slot.key)}
+        <div class="slot-row">
+          <div class="slot-input">
+            <TrackInput
+              index={slots.indexOf(slot) + 1}
+              initialState={slot.savedTitle ? 'filled' : 'idle'}
+              initialTitle={slot.savedTitle ?? ''}
+              initialArtist={slot.savedArtist ?? ''}
+              oncommit={(url) => handleCommit(slot.key, url)}
+            />
+          </div>
+          {#if slot.locked}
+            <div class="slot-spacer"></div>
+          {:else}
+            <button
+              class="slot-delete"
+              onclick={() => handleDelete(slot.key)}
+              aria-label="Remove track {slots.indexOf(slot) + 1}"
+            >×</button>
+          {/if}
+        </div>
+      {/each}
+    </div>
 
-    <button class="btn btn-outline add-btn" onclick={addSlot}>+ Track</button>
+    <div class="slot-row">
+      <button class="btn btn-outline add-btn" onclick={addSlot}>+ Track</button>
+      <div class="slot-spacer"></div>
+    </div>
   </div>
 
   <footer class="page-footer">
@@ -164,13 +183,55 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-    border: 1px solid var(--color-black);
-    padding: var(--space-6);
+  }
+
+  .slots-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .slot-row {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+
+  .slot-input {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .slot-spacer {
+    flex-shrink: 0;
+    width: var(--space-8);
+  }
+
+  .slot-delete {
+    flex-shrink: 0;
+    align-self: center;
+    background: none;
+    border: 1px solid var(--color-gray-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--text-base);
+    color: var(--color-gray-muted);
+    width: var(--space-8);
+    height: var(--space-8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .slot-delete:hover {
+    border-color: var(--color-black);
+    color: var(--color-black);
   }
 
   .add-btn {
-    width: 100%;
-    margin-top: var(--space-2);
+    flex: 1;
   }
 
   .page-footer {

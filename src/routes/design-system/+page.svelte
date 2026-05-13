@@ -50,6 +50,17 @@
         </div>
       </div>
     </div>
+
+    <div class="ds-group">
+      <h3 class="ds-group-title">Warm</h3>
+      <div class="swatch-row">
+        <div class="swatch">
+          <div class="swatch-block" style="background: var(--color-tape-bg); border: 1px solid #eee;"></div>
+          <code>--color-tape-bg</code>
+          <span class="swatch-value">#E2DDD7 — track input area</span>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ── Spacing ── -->
