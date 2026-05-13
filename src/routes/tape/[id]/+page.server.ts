@@ -19,6 +19,7 @@ export const load: PageServerLoad = async ({ params }) => {
     .from('tracks')
     .select('*')
     .eq('tape_id', tapeId)
+    .order('side')
     .order('position')
 
   return { tape, tracks: tracks ?? [] }

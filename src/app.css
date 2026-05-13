@@ -2,7 +2,7 @@
    Design tokens
    ───────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Caveat:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Caveat:wght@400;700&family=Kalam:wght@400&display=swap');
 
 :root {
   /* Spacing — base-4 scale (px value = token name × 4px) */
@@ -23,6 +23,11 @@
   --color-gray-border:    #dddddd;
   --color-gray-surface:   #d2d2d2;  /* cassette-gray bg */
   --color-tape-bg:        #E2DDD7;  /* warm linen — track input area bg */
+
+  /* Font families */
+  --font-sans:        'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-handwritten: 'Caveat', cursive;
+  --font-label:       'Kalam', cursive;
 
   /* Typography — font sizes (rem, base 16px) */
   --text-xs:   0.75rem;   /* 12px */

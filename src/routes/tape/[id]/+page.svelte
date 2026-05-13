@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PageData } from './$types'
-  import cassette from '$lib/assets/Casette.jpg'
+  import cassette from '$lib/assets/Casette-empty.png'
   import { onMount } from 'svelte'
 
   let { data }: { data: PageData } = $props()
@@ -10,11 +10,14 @@
   let isLoaded = $state(false)
   let player: any = null
 
-  const midpoint = $derived(Math.ceil(data.tracks.length / 2))
+  const tracksA = $derived(data.tracks.filter(t => !t.side || t.side === 'a'))
+  const tracksB = $derived(data.tracks.filter(t => t.side === 'b'))
+  const allTracks = $derived([...tracksA, ...tracksB])
+  const midpoint = $derived(tracksA.length)
   const currentSide = $derived(currentTrackIndex < midpoint ? 'A' : 'B')
 
   function getVideoId(index: number): string {
-    return data.tracks[index]?.storage_path ?? ''
+    return allTracks[index]?.storage_path ?? ''
   }
 
   function goToTrack(index: number) {
@@ -131,7 +134,7 @@
     <button class="btn btn-outline" onclick={prev} disabled={currentTrackIndex === 0} aria-label="Previous">⏮</button>
     <button class="btn btn-outline" onclick={stop} disabled={!isPlaying} aria-label="Stop">■</button>
     <button class="btn btn-outline" onclick={next} disabled={currentTrackIndex === data.tracks.length - 1 && !isPlaying} aria-label="Next">⏭</button>
-    <button class="btn btn-outline side-btn" onclick={switchSide} disabled={!isLoaded || data.tracks.length < 2}>
+    <button class="btn btn-outline side-btn" onclick={switchSide} disabled={tracksB.length === 0}>
       {currentSide === 'A' ? 'Side B' : 'Side A'}
     </button>
   </div>
@@ -139,25 +142,25 @@
   <div class="track-list">
     <div class="side-tracks">
       <p class="side-label">Side A</p>
-      {#each data.tracks.slice(0, midpoint) as track, i}
-        <div class="track-item" class:active={i === currentTrackIndex}>
+      {#each tracksA as track, i}
+        <button class="track-item" class:active={i === currentTrackIndex} onclick={() => goToTrack(i)}>
           <span class="track-number">{i + 1}.</span>
           <span class="track-title">{track.title}</span>
           {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
-        </div>
+        </button>
       {/each}
     </div>
 
-    {#if midpoint < data.tracks.length}
+    {#if tracksB.length > 0}
       <hr class="side-divider" />
       <div class="side-tracks">
         <p class="side-label">Side B</p>
-        {#each data.tracks.slice(midpoint) as track, i}
-          <div class="track-item" class:active={midpoint + i === currentTrackIndex}>
+        {#each tracksB as track, i}
+          <button class="track-item" class:active={midpoint + i === currentTrackIndex} onclick={() => goToTrack(midpoint + i)}>
             <span class="track-number">{midpoint + i + 1}.</span>
             <span class="track-title">{track.title}</span>
             {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
-          </div>
+          </button>
         {/each}
       </div>
     {/if}
@@ -253,8 +256,18 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    user-select: none;
-    pointer-events: none;
+    width: 100%;
+    background: none;
+    border: none;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: background 0.1s;
+  }
+
+  .track-item:hover {
+    background: #f5f5f5;
   }
 
   .track-item.active .track-title {
