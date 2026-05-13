@@ -1,5 +1,7 @@
 <script lang="ts">
   import TrackInput from '$lib/components/TrackInput.svelte'
+  import RedButton from '$lib/components/RedButton.svelte'
+  import MetallicButton from '$lib/components/MetallicButton.svelte'
   import PlayerControls from '$lib/components/PlayerControls.svelte'
 </script>
 
@@ -164,6 +166,46 @@
         <button class="btn btn-outline">Next →</button>
         <button class="btn btn-outline btn-icon" aria-label="Stop">■</button>
         <button class="btn btn-outline" disabled>Disabled</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── RedButton ── -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">RedButton</h2>
+    <p class="ds-description">Circular red play button.</p>
+    <div class="ds-group">
+      <h3 class="ds-group-title">Default</h3>
+      <div class="btn-row">
+        <RedButton onclick={() => {}} />
+      </div>
+    </div>
+    <div class="ds-group">
+      <h3 class="ds-group-title">Disabled</h3>
+      <div class="btn-row">
+        <RedButton onclick={() => {}} disabled />
+      </div>
+    </div>
+  </section>
+
+  <!-- ── MetallicButton ── -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">MetallicButton</h2>
+    <p class="ds-description">Metallic rectangular button. Hover changes both outer frame and inner surface gradients.</p>
+    <div class="ds-group">
+      <h3 class="ds-group-title">Default</h3>
+      <div class="btn-row">
+        <MetallicButton onclick={() => {}} aria-label="Rewind">⏮</MetallicButton>
+        <MetallicButton onclick={() => {}} aria-label="Stop">■</MetallicButton>
+        <MetallicButton onclick={() => {}} aria-label="Next">⏭</MetallicButton>
+        <MetallicButton class="switch-btn" onclick={() => {}} aria-label="Side B">SIDE B</MetallicButton>
+      </div>
+    </div>
+    <div class="ds-group">
+      <h3 class="ds-group-title">Disabled</h3>
+      <div class="btn-row">
+        <MetallicButton onclick={() => {}} disabled aria-label="Rewind">⏮</MetallicButton>
+        <MetallicButton class="switch-btn" onclick={() => {}} disabled aria-label="Side B">SIDE B</MetallicButton>
       </div>
     </div>
   </section>

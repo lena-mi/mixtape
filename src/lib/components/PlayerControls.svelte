@@ -1,4 +1,7 @@
 <script lang="ts">
+  import RedButton from './RedButton.svelte'
+  import MetallicButton from './MetallicButton.svelte'
+
   let {
     onplay,
     onstop,
@@ -27,24 +30,13 @@
 </script>
 
 <div class="controls">
-  <button
-    class="play-btn"
-    onclick={onplay}
-    disabled={!isLoaded || isPlaying}
-    aria-label="Play"
-  >
-    <span class="play-gloss"></span>
-    <svg class="play-icon" viewBox="0 0 9 11" fill="none" aria-hidden="true">
-      <path d="M0 0L9 5.5L0 11Z" fill="#D9D9D9" />
-    </svg>
-  </button>
-
-  <button class="ctrl-btn" onclick={onprev} disabled={!canPrev} aria-label="Previous"><span>⏮</span></button>
-  <button class="ctrl-btn" onclick={onstop} disabled={!isPlaying} aria-label="Stop"><span>■</span></button>
-  <button class="ctrl-btn" onclick={onnext} disabled={!canNext} aria-label="Next"><span>⏭</span></button>
-  <button class="ctrl-btn switch-btn" onclick={onswitchside} disabled={!hasSideB} aria-label="Switch side">
-    <span>{currentSide === 'A' ? 'SIDE B' : 'SIDE A'}</span>
-  </button>
+  <RedButton onclick={onplay} disabled={!isLoaded || isPlaying} />
+  <MetallicButton onclick={onprev} disabled={!canPrev} aria-label="Previous">⏮</MetallicButton>
+  <MetallicButton onclick={onstop} disabled={!isPlaying} aria-label="Stop">■</MetallicButton>
+  <MetallicButton onclick={onnext} disabled={!canNext} aria-label="Next">⏭</MetallicButton>
+  <MetallicButton class="switch-btn" onclick={onswitchside} disabled={!hasSideB} aria-label="Switch side">
+    {currentSide === 'A' ? 'SIDE B' : 'SIDE A'}
+  </MetallicButton>
 </div>
 
 <style>
