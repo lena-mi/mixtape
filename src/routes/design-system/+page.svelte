@@ -1,3 +1,7 @@
+<script lang="ts">
+  import TrackInput from '$lib/components/TrackInput.svelte'
+</script>
+
 <main class="ds-page">
   <h1 class="ds-page-title">Design System</h1>
 
@@ -100,6 +104,19 @@
         </div>
       {/each}
     </div>
+
+    <div class="ds-group">
+      <h3 class="ds-group-title">Caveat — track display</h3>
+      <div class="type-row">
+        <div class="type-meta">
+          <code>font-family: 'Caveat'</code>
+          <span class="type-detail">18px · tracking 0 · used for filled track names</span>
+        </div>
+        <p style="font-family: 'Caveat', cursive; font-size: 18px; letter-spacing: 0;">
+          Mixtape for you — Artist Name
+        </p>
+      </div>
+    </div>
   </section>
 
   <!-- ── Inputs ── -->
@@ -136,6 +153,32 @@
         <button class="btn btn-outline btn-icon" aria-label="Stop">■</button>
         <button class="btn btn-outline" disabled>Disabled</button>
       </div>
+    </div>
+  </section>
+
+  <!-- ── TrackInput ── -->
+  <section class="ds-section">
+    <h2 class="ds-section-title">TrackInput</h2>
+    <p class="ds-description">Four states: idle → processing → filled → renaming.</p>
+
+    <div class="ds-group">
+      <h3 class="ds-group-title">Idle — enter YouTube URL</h3>
+      <TrackInput index={1} />
+    </div>
+
+    <div class="ds-group">
+      <h3 class="ds-group-title">Processing</h3>
+      <TrackInput index={2} mockState="processing" />
+    </div>
+
+    <div class="ds-group">
+      <h3 class="ds-group-title">Filled</h3>
+      <TrackInput index={3} mockState="filled" mockTitle="Midnight City" mockArtist="M83" />
+    </div>
+
+    <div class="ds-group">
+      <h3 class="ds-group-title">Renaming</h3>
+      <TrackInput index={4} mockState="renaming" mockTitle="Midnight City" mockArtist="M83" />
     </div>
   </section>
 </main>
