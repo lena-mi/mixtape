@@ -134,27 +134,25 @@
 </div>
 
 <main class="tape-page">
-  <div class="tape-header">
+  <header class="tape-header">
     <h1 class="tape-title">{data.tape.title}</h1>
     {#if data.tape.dedication}
       <p class="tape-dedication">{data.tape.dedication}</p>
     {/if}
-  </div>
+  </header>
 
   <div class="cassette-container">
     <img src={cassette} alt="Cassette tape" class="cassette-image" />
   </div>
 
   <div class="player-controls">
-    <div class="control-buttons">
-      <button class="ctrl-btn" onclick={play} disabled={!isLoaded || isPlaying} aria-label="Play">▶</button>
-      <button class="ctrl-btn" onclick={prev} disabled={currentTrackIndex === 0} aria-label="Previous">⏮</button>
-      <button class="ctrl-btn stop-btn" onclick={stop} disabled={!isPlaying} aria-label="Stop">■</button>
-      <button class="ctrl-btn" onclick={next} disabled={currentTrackIndex === data.tracks.length - 1 && !isPlaying} aria-label="Next">⏭</button>
-      <button class="ctrl-btn side-btn" onclick={switchSide} disabled={!isLoaded || data.tracks.length < 2} aria-label="Switch side">
-        {currentSide === 'A' ? 'Side B' : 'Side A'}
-      </button>
-    </div>
+    <button class="btn btn-outline" onclick={play} disabled={!isLoaded || isPlaying} aria-label="Play">▶</button>
+    <button class="btn btn-outline" onclick={prev} disabled={currentTrackIndex === 0} aria-label="Previous">⏮</button>
+    <button class="btn btn-outline" onclick={stop} disabled={!isPlaying} aria-label="Stop">■</button>
+    <button class="btn btn-outline" onclick={next} disabled={currentTrackIndex === data.tracks.length - 1 && !isPlaying} aria-label="Next">⏭</button>
+    <button class="btn btn-outline side-btn" onclick={switchSide} disabled={!isLoaded || data.tracks.length < 2}>
+      {currentSide === 'A' ? 'Side B' : 'Side A'}
+    </button>
   </div>
 
   <div class="track-list">
@@ -188,34 +186,32 @@
 <style>
   .tape-page {
     min-height: 100vh;
-    background: white;
-    padding: 20px;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
-    color: black;
+    padding: var(--space-6);
   }
 
   .tape-header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: var(--space-8);
   }
 
   .tape-title {
-    font-size: 2rem;
-    font-weight: bold;
-    color: black;
-    margin: 0 0 10px 0;
+    font-size: var(--text-4xl);
+    font-weight: 700;
+    letter-spacing: var(--tracking-4xl);
+    line-height: var(--leading-tight);
+    margin-bottom: var(--space-2);
   }
 
   .tape-dedication {
-    font-size: 1.1rem;
-    color: black;
+    font-size: var(--text-lg);
+    letter-spacing: var(--tracking-lg);
     font-style: italic;
-    margin: 0;
+    color: var(--color-gray-secondary);
   }
 
   .cassette-container {
     max-width: 600px;
-    margin: 0 auto 32px;
+    margin: 0 auto var(--space-8);
     display: flex;
     justify-content: center;
   }
@@ -227,79 +223,27 @@
     display: block;
   }
 
-  /* ── Controls ── */
+  /* Controls */
 
   .player-controls {
     max-width: 500px;
-    margin: 0 auto 32px;
+    margin: 0 auto var(--space-8);
     display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .control-buttons {
-    display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     justify-content: center;
     flex-wrap: nowrap;
   }
 
-  .ctrl-btn {
-    padding: 8px 14px;
-    border: 1px solid black;
-    background: white;
-    color: black;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 600;
-    transition: background 0.15s, color 0.15s;
-    white-space: nowrap;
-  }
-
-  .ctrl-btn:hover:not(:disabled) {
-    background: black;
-    color: white;
-  }
-
-  .ctrl-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  .stop-btn {
-    font-size: 0.85rem;
-  }
-
   .side-btn {
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
-    padding: 8px 12px;
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-xs);
   }
 
-  /* ── Tracklist ── */
+  /* Tracklist */
 
   .track-list {
     max-width: 500px;
     margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .side-label {
-    margin: 0 0 6px 12px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #999;
-  }
-
-  .side-divider {
-    border: none;
-    border-top: 1px solid #ddd;
-    margin: 12px 0;
   }
 
   .side-tracks {
@@ -308,13 +252,26 @@
     gap: 2px;
   }
 
+  .side-label {
+    margin: 0 0 var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: var(--tracking-xs);
+    text-transform: uppercase;
+    color: var(--color-gray-muted);
+  }
+
+  .side-divider {
+    border: none;
+    border-top: 1px solid var(--color-gray-border);
+    margin: var(--space-3) 0;
+  }
+
   .track-item {
-    padding: 7px 12px;
+    padding: var(--space-2) var(--space-3);
     display: flex;
     align-items: center;
-    gap: 8px;
-    border-radius: 4px;
-    border: 1px solid transparent;
+    gap: var(--space-2);
     user-select: none;
     pointer-events: none;
   }
@@ -324,33 +281,27 @@
   }
 
   .track-number {
-    color: #999;
-    font-weight: 500;
-    min-width: 24px;
-    font-size: 0.85rem;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-sm);
+    color: var(--color-gray-muted);
+    min-width: var(--space-6);
   }
 
   .track-title {
     flex: 1;
-    color: black;
+    font-size: var(--text-base);
+    letter-spacing: var(--tracking-base);
   }
 
   .track-artist {
-    color: #666;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-sm);
+    color: var(--color-gray-secondary);
     font-style: italic;
-    font-size: 0.9rem;
   }
 
   @media (max-width: 500px) {
-    .tape-title { font-size: 1.5rem; }
-
-    .control-buttons { gap: 6px; }
-
-    .ctrl-btn {
-      padding: 8px 10px;
-      font-size: 0.9rem;
-    }
-
-    .side-btn { font-size: 0.75rem; }
+    .tape-title { font-size: var(--text-3xl); }
+    .player-controls { gap: var(--space-1); }
   }
 </style>

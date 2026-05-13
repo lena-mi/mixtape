@@ -10,7 +10,7 @@
   let loading = $state(false)
   let inputError = $state('')
   let playingId = $state<string | null>(null)
-  let progress = $state(0)   // 0–100
+  let progress = $state(0)
   let player: any = null
   let ticker: ReturnType<typeof setInterval> | null = null
 
@@ -72,9 +72,9 @@
         events: {
           onReady: () => {},
           onStateChange: (e: any) => {
-            if (e.data === 1) {        // playing
+            if (e.data === 1) {
               startTicker()
-            } else if (e.data === 0) { // ended
+            } else if (e.data === 0) {
               stopTicker()
               progress = 0
               const idx = data.tracks.findIndex(t => t.id === playingId)
@@ -85,7 +85,7 @@
               } else {
                 playingId = null
               }
-            } else if (e.data === 2) { // paused
+            } else if (e.data === 2) {
               stopTicker()
             }
           }
@@ -135,23 +135,13 @@
       formData.append('title', trackTitle.trim())
       formData.append('artist', trackArtist.trim())
 
-      console.log('Submitting form with:', { videoId, title: trackTitle.trim(), artist: trackArtist.trim() })
-
-      const response = await fetch(`?/addTrack`, {
-        method: 'POST',
-        body: formData
-      })
-
-      console.log('Response status:', response.status)
+      const response = await fetch(`?/addTrack`, { method: 'POST', body: formData })
       const responseText = await response.text()
-      console.log('Response text:', responseText)
 
       if (response.ok) {
-        // Reset form
         youtubeUrl = ''
         trackTitle = ''
         trackArtist = ''
-        console.log('Track added successfully, reloading...')
         location.reload()
       } else {
         try {
@@ -160,126 +150,295 @@
         } catch {
           inputError = `Error: ${response.status} - ${responseText.substring(0, 100)}`
         }
-        console.error('Failed to add track:', inputError)
       }
     } catch (err) {
       inputError = `Network error: ${err}`
-      console.error('Network error:', err)
     } finally {
       loading = false
     }
   }
 </script>
 
-<main style="max-width: 600px; margin: 40px auto; padding: 0 20px; font-family: sans-serif;">
-  <h1>{data.tape.title}</h1>
-  {#if data.tape.dedication}
-    <p style="color: gray;">{data.tape.dedication}</p>
-  {/if}
+<div style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;" aria-hidden="true">
+  <div id="yt-preview-player"></div>
+</div>
 
-  <hr />
-  <h2>Add a track</h2>
+<main class="page">
+  <header class="page-header">
+    <h1 class="page-title">{data.tape.title}</h1>
+    {#if data.tape.dedication}
+      <p class="page-dedication">{data.tape.dedication}</p>
+    {/if}
+  </header>
 
-  <div style="display: flex; flex-direction: column; gap: 12px;">
-    <div>
-      <label for="youtube_url" style="display: block; margin-bottom: 4px; font-weight: bold;">YouTube URL or Video ID</label>
-      <input
-        type="text"
-        id="youtube_url"
-        bind:value={youtubeUrl}
-        placeholder="https://youtube.com/watch?v=... or dQw4w9WgXcQ"
-        disabled={loading}
-        style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;"
-      />
-    </div>
+  <hr class="divider" />
 
-    <div>
-      <label for="title" style="display: block; margin-bottom: 4px; font-weight: bold;">Track title</label>
-      <input
-        type="text"
-        id="title"
-        bind:value={trackTitle}
-        placeholder="Enter track title"
-        disabled={loading}
-        style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;"
-      />
-    </div>
+  <section class="form-section">
+    <h2 class="section-title">Add a track</h2>
 
-    <div>
-      <label for="artist" style="display: block; margin-bottom: 4px; font-weight: bold;">Artist (optional)</label>
-      <input
-        type="text"
-        id="artist"
-        bind:value={trackArtist}
-        placeholder="Enter artist name"
-        disabled={loading}
-        style="width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;"
-      />
-    </div>
-
-    <button
-      type="button"
-      onclick={addTrack}
-      disabled={loading || !youtubeUrl.trim()}
-      style="padding: 10px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;"
-    >
-      {loading ? 'Adding...' : 'Add Track'}
-    </button>
-  </div>
-
-  {#if inputError}
-    <p style="color: red; margin-top: 8px;">{inputError}</p>
-  {/if}
-
-  <hr />
-  <h2>Tracks ({data.tracks.length})</h2>
-
-  {#if data.tracks.length === 0}
-    <p style="color: gray;">No tracks yet — add one above.</p>
-  {/if}
-
-  <!-- Hidden YouTube IFrame player -->
-  <div style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;" aria-hidden="true">
-    <div id="yt-preview-player"></div>
-  </div>
-
-  {#each data.tracks as track}
-    <div style="padding: 8px 0; border-bottom: 1px solid #eee;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <button
-          type="button"
-          onclick={() => togglePlay(track)}
-          style="background: none; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 12px; flex-shrink: 0;"
-        >
-          {playingId === track.id ? '■' : '▶'}
-        </button>
-        <strong style="flex: 1;">{track.title}</strong>
-        {#if track.artist}<span style="color: gray;">{track.artist}</span>{/if}
-        <form method="POST" action="?/deleteTrack">
-          <input type="hidden" name="id" value={track.id} />
-          <button
-            type="submit"
-            style="background: none; border: none; cursor: pointer; color: #ccc; font-size: 16px; padding: 0 4px;"
-          >
-            ×
-          </button>
-        </form>
+    <div class="form-fields">
+      <div class="field">
+        <label class="label" for="youtube_url">YouTube URL or Video ID</label>
+        <input
+          class="input"
+          type="text"
+          id="youtube_url"
+          bind:value={youtubeUrl}
+          placeholder="https://youtube.com/watch?v=… or dQw4w9WgXcQ"
+          disabled={loading}
+        />
       </div>
-      {#if playingId === track.id}
-        <button
-          type="button"
-          aria-label="Seek"
-          onclick={seek}
-          style="display: block; width: 100%; margin-top: 6px; height: 3px; background: #eee; border-radius: 2px; cursor: pointer; padding: 0; border: none;"
-        >
-          <div style="height: 100%; width: {progress}%; background: #007bff; border-radius: 2px; transition: width 0.4s linear;"></div>
-        </button>
-      {/if}
-    </div>
-  {/each}
 
-  <hr />
-  <a href="/tape/{data.tape.id}">
-    <button>Share this tape →</button>
-  </a>
+      <div class="field">
+        <label class="label" for="title">Track title</label>
+        <input
+          class="input"
+          type="text"
+          id="title"
+          bind:value={trackTitle}
+          placeholder="Enter track title"
+          disabled={loading}
+        />
+      </div>
+
+      <div class="field">
+        <label class="label" for="artist">Artist (optional)</label>
+        <input
+          class="input"
+          type="text"
+          id="artist"
+          bind:value={trackArtist}
+          placeholder="Enter artist name"
+          disabled={loading}
+        />
+      </div>
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        onclick={addTrack}
+        disabled={loading || !youtubeUrl.trim()}
+      >
+        {loading ? 'Adding…' : 'Add Track'}
+      </button>
+    </div>
+
+    {#if inputError}
+      <p class="error">{inputError}</p>
+    {/if}
+  </section>
+
+  <hr class="divider" />
+
+  <section class="tracks-section">
+    <h2 class="section-title">Tracks ({data.tracks.length})</h2>
+
+    {#if data.tracks.length === 0}
+      <p class="empty-state">No tracks yet — add one above.</p>
+    {/if}
+
+    {#each data.tracks as track}
+      <div class="track-row">
+        <div class="track-row-main">
+          <button
+            type="button"
+            class="play-btn"
+            onclick={() => togglePlay(track)}
+            aria-label={playingId === track.id ? 'Pause' : 'Play'}
+          >
+            {playingId === track.id ? '■' : '▶'}
+          </button>
+          <span class="track-title">{track.title}</span>
+          {#if track.artist}<span class="track-artist">{track.artist}</span>{/if}
+          <form method="POST" action="?/deleteTrack">
+            <input type="hidden" name="id" value={track.id} />
+            <button type="submit" class="delete-btn" aria-label="Remove track">×</button>
+          </form>
+        </div>
+        {#if playingId === track.id}
+          <button
+            type="button"
+            class="seek-bar"
+            aria-label="Seek"
+            onclick={seek}
+          >
+            <div class="seek-fill" style="width: {progress}%"></div>
+          </button>
+        {/if}
+      </div>
+    {/each}
+  </section>
+
+  <hr class="divider" />
+
+  <a href="/tape/{data.tape.id}" class="btn btn-outline">Share this tape →</a>
 </main>
+
+<style>
+  .page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: var(--space-8) var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .page-title {
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    letter-spacing: var(--tracking-3xl);
+    line-height: var(--leading-tight);
+  }
+
+  .page-dedication {
+    font-size: var(--text-base);
+    letter-spacing: var(--tracking-base);
+    color: var(--color-gray-secondary);
+    font-style: italic;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--color-gray-border);
+    margin: 0;
+  }
+
+  .section-title {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    letter-spacing: var(--tracking-lg);
+    margin-bottom: var(--space-4);
+  }
+
+  /* Form */
+
+  .form-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .label {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    letter-spacing: var(--tracking-sm);
+  }
+
+  .error {
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-sm);
+    color: #c00;
+  }
+
+  /* Tracks */
+
+  .tracks-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .empty-state {
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-sm);
+    color: var(--color-gray-secondary);
+  }
+
+  .track-row {
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-gray-border);
+  }
+
+  .track-row-main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .play-btn {
+    flex-shrink: 0;
+    width: var(--space-8);
+    height: var(--space-8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--color-gray-border);
+    background: var(--color-white);
+    color: var(--color-black);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .play-btn:hover {
+    border-color: var(--color-black);
+    background: var(--color-black);
+    color: var(--color-white);
+  }
+
+  .track-title {
+    flex: 1;
+    font-size: var(--text-base);
+    font-weight: 500;
+    letter-spacing: var(--tracking-base);
+  }
+
+  .track-artist {
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-sm);
+    color: var(--color-gray-secondary);
+  }
+
+  .delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-gray-muted);
+    font-size: var(--text-lg);
+    line-height: 1;
+    padding: 0 var(--space-1);
+    transition: color 0.15s;
+  }
+
+  .delete-btn:hover {
+    color: var(--color-black);
+  }
+
+  .seek-bar {
+    display: block;
+    width: 100%;
+    margin-top: var(--space-2);
+    height: 3px;
+    background: var(--color-gray-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    padding: 0;
+    border: none;
+  }
+
+  .seek-fill {
+    height: 100%;
+    background: var(--color-black);
+    border-radius: var(--radius-sm);
+    transition: width 0.4s linear;
+  }
+</style>
