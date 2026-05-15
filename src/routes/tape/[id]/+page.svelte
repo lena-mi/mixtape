@@ -201,7 +201,7 @@
 
   .cassette-container {
     max-width: 600px;
-    margin: 0 auto var(--space-8);
+    margin: 0 auto 20px;
     display: flex;
     justify-content: center;
   }
@@ -211,6 +211,7 @@
     max-width: 500px;
     height: auto;
     display: block;
+    filter: drop-shadow(4px 10px 14px rgba(0, 0, 0, 0.35));
   }
 
   /* Controls */

@@ -30,10 +30,10 @@
 </script>
 
 <div class="controls">
-  <RedButton onclick={onplay} disabled={!isLoaded || isPlaying} />
-  <MetallicButton onclick={onprev} disabled={!canPrev} aria-label="Previous">⏮</MetallicButton>
-  <MetallicButton onclick={onstop} disabled={!isPlaying} aria-label="Stop">■</MetallicButton>
-  <MetallicButton onclick={onnext} disabled={!canNext} aria-label="Next">⏭</MetallicButton>
+  <RedButton onclick={onplay} disabled={!isLoaded} {isPlaying} />
+  <MetallicButton class="prev-btn" onclick={onprev} disabled={!canPrev} aria-label="Previous">⏮</MetallicButton>
+  <MetallicButton class="stop-btn" onclick={onstop} disabled={!isPlaying} aria-label="Stop">■</MetallicButton>
+  <MetallicButton class="next-btn" onclick={onnext} disabled={!canNext} aria-label="Next">⏭</MetallicButton>
   <MetallicButton class="switch-btn" onclick={onswitchside} disabled={!hasSideB} aria-label="Switch side">
     {currentSide === 'A' ? 'SIDE B' : 'SIDE A'}
   </MetallicButton>
@@ -43,6 +43,20 @@
   .controls {
     display: flex;
     align-items: center;
-    gap: 10px;
+  }
+
+  /* 2px between the three metallic control buttons */
+  .controls :global(.metallic-btn) {
+    margin-left: 2px;
+  }
+
+  /* 8px gap between red button and rewind */
+  .controls :global(.prev-btn) {
+    margin-left: 8px;
+  }
+
+  /* 20px gap before switch side */
+  .controls :global(.switch-btn) {
+    margin-left: 20px;
   }
 </style>
