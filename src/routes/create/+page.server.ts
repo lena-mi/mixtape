@@ -92,6 +92,14 @@ export const actions: Actions = {
     await supabaseAdmin.from('tracks').delete().eq('id', id)
   },
 
+  updateCover: async ({ request, cookies }) => {
+    const data = await request.formData()
+    const tapeId = (data.get('tape_id') as string) || cookies.get('draft_tape_id')
+    if (!tapeId) return fail(400, { error: 'No active tape' })
+    const coverUrl = (data.get('cover_url') as string).trim() || null
+    await supabaseAdmin.from('tapes').update({ cover_url: coverUrl }).eq('id', tapeId)
+  },
+
   share: async ({ cookies }) => {
     const tapeId = cookies.get('draft_tape_id')
     cookies.delete('draft_tape_id', { path: '/' })

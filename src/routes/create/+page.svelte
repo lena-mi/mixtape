@@ -3,8 +3,18 @@
   import { untrack } from 'svelte'
   import { invalidateAll } from '$app/navigation'
   import TrackInput from '$lib/components/TrackInput.svelte'
+  import cassette from '$lib/assets/Casette-empty.png'
 
   let { data }: { data: PageData } = $props()
+
+  let coverUrl = $state(untrack(() => data.tape.cover_url ?? ''))
+
+  async function saveCover() {
+    const formData = new FormData()
+    formData.append('tape_id', data.tape.id)
+    formData.append('cover_url', coverUrl)
+    await fetch('?/updateCover', { method: 'POST', body: formData })
+  }
 
   type Side = 'a' | 'b'
   type Slot = {
@@ -143,6 +153,23 @@
     />
   </header>
 
+  <div class="cassette-preview">
+    <div class="cassette-frame">
+      <img src={cassette} alt="Cassette tape" class="cassette-img" />
+      {#if coverUrl}
+        <img src={coverUrl} alt="Cover" class="cover-img" />
+      {/if}
+    </div>
+    <input
+      class="input cover-url-input"
+      type="url"
+      placeholder="Paste image URL for cover…"
+      bind:value={coverUrl}
+      onblur={saveCover}
+      onkeydown={(e) => e.key === 'Enter' && saveCover()}
+    />
+  </div>
+
   <div class="sides">
     {#each (['a', 'b'] as Side[]) as side (side)}
       {@const slots = side === 'a' ? slotsA : slotsB}
@@ -240,6 +267,38 @@
     color: var(--color-gray-border);
     font-style: italic;
   }
+
+  .cassette-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .cassette-frame {
+    position: relative;
+    display: inline-block;
+    max-width: 500px;
+    width: 100%;
+  }
+
+  .cassette-img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .cover-img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 470px;
+    height: 286px;
+    object-fit: cover;
+    mix-blend-mode: multiply;
+  }
+
 
   .sides {
     display: flex;

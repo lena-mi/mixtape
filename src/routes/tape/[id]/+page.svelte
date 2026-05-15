@@ -45,19 +45,22 @@
     player.pauseVideo()
   }
 
+  function sideEnd() {
+    return currentSide === 'A' ? midpoint - 1 : allTracks.length - 1
+  }
+
+  function sideStart() {
+    return currentSide === 'A' ? 0 : midpoint
+  }
+
   function next() {
     const nextIdx = currentTrackIndex + 1
-    if (nextIdx < data.tracks.length) {
-      goToTrack(nextIdx)
-    } else if (isPlaying) {
-      currentTrackIndex = 0
-      const videoId = getVideoId(0)
-      if (player && videoId) player.loadVideoById(videoId)
-    }
+    if (nextIdx <= sideEnd()) goToTrack(nextIdx)
   }
 
   function prev() {
-    if (currentTrackIndex > 0) goToTrack(currentTrackIndex - 1)
+    const prevIdx = currentTrackIndex - 1
+    if (prevIdx >= sideStart()) goToTrack(prevIdx)
   }
 
   function switchSide() {
@@ -69,14 +72,12 @@
   function onYoutubeStateChange(event: any) {
     if (event.data === 0 && isPlaying) {
       const nextIdx = currentTrackIndex + 1
-      if (nextIdx < data.tracks.length) {
+      if (nextIdx <= sideEnd()) {
         currentTrackIndex = nextIdx
         const videoId = getVideoId(nextIdx)
         if (player && videoId) player.loadVideoById(videoId)
       } else {
         isPlaying = false
-        currentTrackIndex = 0
-        player.cueVideoById(getVideoId(0))
       }
     } else if (event.data === 1) {
       isPlaying = true
@@ -127,7 +128,12 @@
   </header>
 
   <div class="cassette-container">
-    <img src={cassette} alt="Cassette tape" class="cassette-image" />
+    <div class="cassette-wrap">
+      <img src={cassette} alt="Cassette tape" class="cassette-image" />
+      {#if data.tape.cover_url}
+        <img src={data.tape.cover_url} alt="Cover" class="cover-image" />
+      {/if}
+    </div>
   </div>
 
   <div class="player-controls">
@@ -139,8 +145,8 @@
       onswitchside={switchSide}
       {isPlaying}
       {isLoaded}
-      canPrev={currentTrackIndex > 0}
-      canNext={currentTrackIndex < allTracks.length - 1 || isPlaying}
+      canPrev={currentTrackIndex > (currentSide === 'A' ? 0 : midpoint)}
+      canNext={currentTrackIndex < (currentSide === 'A' ? midpoint - 1 : allTracks.length - 1)}
       hasSideB={tracksB.length > 0}
       {currentSide}
     />
@@ -200,18 +206,36 @@
   }
 
   .cassette-container {
-    max-width: 600px;
     margin: 0 auto 20px;
+    max-width: 600px;
     display: flex;
     justify-content: center;
   }
 
+  .cassette-wrap {
+    position: relative;
+    display: inline-block;
+    max-width: 500px;
+    width: 100%;
+  }
+
   .cassette-image {
     width: 100%;
-    max-width: 500px;
     height: auto;
     display: block;
     filter: drop-shadow(4px 10px 14px rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(2px 4px 4px rgba(0, 0, 0, 0.35));
+  }
+
+  .cover-image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 470px;
+    height: 286px;
+    object-fit: cover;
+    mix-blend-mode: multiply;
   }
 
   /* Controls */
