@@ -30,9 +30,11 @@
 </script>
 
 <div class="controls">
-  <RedButton onclick={onplay} disabled={!isLoaded} {isPlaying} />
+  <div class="play-wrap">
+    <RedButton onclick={onplay} disabled={!isLoaded} {isPlaying} />
+  </div>
   <MetallicButton class="prev-btn" onclick={onprev} disabled={!canPrev} aria-label="Previous">⏮</MetallicButton>
-  <MetallicButton class="stop-btn" onclick={onstop} disabled={!isPlaying} aria-label="Stop">■</MetallicButton>
+  <MetallicButton class="stop-btn" onclick={onstop} disabled={!isPlaying} aria-label="Pause">⏸</MetallicButton>
   <MetallicButton class="next-btn" onclick={onnext} disabled={!canNext} aria-label="Next">⏭</MetallicButton>
   <MetallicButton class="switch-btn" onclick={onswitchside} disabled={!hasSideB} aria-label="Switch side">
     {currentSide === 'A' ? 'SIDE B' : 'SIDE A'}
@@ -43,6 +45,10 @@
   .controls {
     display: flex;
     align-items: center;
+  }
+
+  .play-wrap {
+    margin-bottom: 1px;
   }
 
   /* 2px between the three metallic control buttons */
