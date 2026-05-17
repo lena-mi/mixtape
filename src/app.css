@@ -206,61 +206,36 @@ body::before {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(360deg, #EF6348 0%, #B63325 100%);
-  box-shadow: 0px 2px 0px #000000, inset 0px -4px 4px rgba(0, 0, 0, 0.45);
+  background:
+    linear-gradient(147.09deg, rgba(246, 114, 80, 0.2) 12.63%, rgba(133, 1, 1, 0.2) 85.85%),
+    radial-gradient(50% 50% at 50% 50%, #F67237 0.96%, #F35C2A 25%, #E91900 100%);
+  box-shadow:
+    inset 2px 4px 6px rgba(255, 255, 255, 0.62),
+    inset -2px -4px 4px rgba(36, 7, 8, 0.3),
+    inset 0px -4px 4px rgba(0, 0, 0, 0.45);
   border: none;
   cursor: pointer;
   padding: 0;
   overflow: hidden;
 }
 
-.red-btn:not(:disabled):hover {
-  background: linear-gradient(360deg, #FF8168 0%, #D23E2F 100%);
+.red-btn:not(:disabled):not(.is-playing):hover {
+  background:
+    linear-gradient(147.09deg, rgba(255, 233, 88, 0.2) 12.63%, rgba(255, 25, 25, 0.2) 85.85%),
+    radial-gradient(50% 50% at 50% 50%, #FF9D71 0.96%, #FF855C 25%, #FF2106 100%);
 }
 
 .red-btn:not(:disabled):active,
 .red-btn.is-playing {
-  background: linear-gradient(360deg, #D23E2F 0%, #FFA999 100%);
-  box-shadow: inset 0px -4px 4px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(360deg, #D13301 0%, #EF3805 9.33%, #D02805 77.39%, #971000 100%);
+  box-shadow:
+    inset 0px -4px 4px rgba(36, 7, 8, 0.3),
+    inset 0px 0px 4px 2px rgba(0, 0, 0, 0.45);
 }
 
 .red-btn:disabled {
   cursor: not-allowed;
-  box-shadow: inset 0px -2px 4px rgba(0, 0, 0, 0.45);
-}
-
-.red-btn .red-btn-gloss {
-  position: absolute;
-  left: 14.28%;
-  right: 14.29%;
-  top: 10.71%;
-  bottom: 17.86%;
-  border-radius: 50%;
-  background:
-    radial-gradient(50% 50% at 50% 50%, rgba(255, 255, 255, 0.2) 50.48%, rgba(220, 59, 27, 0) 100%),
-    linear-gradient(360deg, #EF6348 0%, #CD3718 100%);
-  background-blend-mode: hard-light, normal;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  transform: rotate(-180deg);
-}
-
-.red-btn:not(:disabled):hover .red-btn-gloss {
-  background:
-    radial-gradient(50% 50% at 50% 50%, rgba(255, 255, 255, 0.2) 50.48%, rgba(220, 59, 27, 0) 100%),
-    linear-gradient(360deg, #FF7F44 0%, #D93513 100%);
-  background-blend-mode: hard-light, normal;
-}
-
-.red-btn:not(:disabled):active .red-btn-gloss,
-.red-btn.is-playing .red-btn-gloss {
-  background:
-    radial-gradient(50% 50% at 50% 50%, rgba(255, 255, 255, 0.2) 50.48%, rgba(220, 59, 27, 0) 100%),
-    linear-gradient(360deg, #FF7F43 0%, #D93513 100%);
-  background-blend-mode: hard-light, normal;
-}
-
-.red-btn:disabled .red-btn-gloss {
-  background: none;
+  opacity: 0.5;
 }
 
 .red-btn .red-btn-icon {
@@ -269,10 +244,6 @@ body::before {
   right: 35.71%;
   top: 35.71%;
   bottom: 37.5%;
-}
-
-.red-btn:disabled .red-btn-icon {
-  opacity: 0.5;
 }
 
 /* MetallicButton — self-contained metallic rectangle */
@@ -299,7 +270,7 @@ body::before {
   bottom: 2px;
   border-radius: 4px;
   background: linear-gradient(180deg, #393B3A 0%, #656362 19.48%, #E8E6E4 28.82%, #E3E2E0 55.71%, #9BA0A1 69.42%, #797E80 85.18%, #9CA19E 100%);
-  box-shadow: 0px 2px 0px #000000;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.22), 1px 2px 4px rgba(0, 0, 0, 0.4);
   z-index: 0;
 }
 
@@ -311,7 +282,7 @@ body::before {
   right: 4px;
   top: 4px;
   bottom: 6px;
-  border-radius: 2px;
+  border-radius: 4px;
   background: linear-gradient(0deg, #E2E1DF 29.02%, #9CA19E 100%);
   box-shadow:
     inset 0px -4px 4px #4A4E51,
@@ -320,10 +291,23 @@ body::before {
   z-index: 1;
 }
 
-/* label/icon — above both pseudo-elements */
-.metallic-btn > span {
-  position: relative;
+/* gloss overlay — Rectangle 100 */
+.metallic-btn > .metallic-btn-gloss {
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: -2px;
+  bottom: 0;
+  background: linear-gradient(93.74deg, rgba(0, 0, 0, 0.1) 0%, rgba(217, 217, 217, 0.1) 50%, rgba(0, 0, 0, 0.1) 100%);
+  border-radius: 4px;
   z-index: 2;
+  pointer-events: none;
+}
+
+/* label/icon — above all layers */
+.metallic-btn > span:last-child {
+  position: relative;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -349,29 +333,10 @@ body::before {
   background: linear-gradient(0deg, #E2E1DF 61.06%, #9CA19E 100%);
 }
 
-/* pressed — outer frame shifts down, gradient inverts, shadow moves to top */
+/* pressed — inset shadow, hover gradient, no position shift */
 .metallic-btn:not(:disabled):active::before {
-  top: 2px;
-  bottom: -2px;
-  background: linear-gradient(180deg, #9CA19E 0%, #797E80 0.01%, #9BA0A1 0.02%, #E3E2E0 8.65%, #E8E6E4 21.15%, #656362 81.73%, #393B3A 100%);
-  box-shadow: 0px -2px 0px #000000;
-}
-
-/* pressed — inner surface shifts down */
-.metallic-btn:not(:disabled):active::after {
-  top: 6px;
-  bottom: 2px;
-  background: linear-gradient(0deg, #E2E1DF 39.42%, #9CA19E 100%);
-  box-shadow:
-    inset 0px -4px 4px #4A4E51,
-    inset 0px -4px 12px rgba(16, 18, 22, 0.2),
-    inset 0px 4px 4px rgba(87, 91, 95, 0.8);
-}
-
-/* pressed — label shifts down with the frame */
-.metallic-btn:not(:disabled):active > span {
-  padding-top: 4px;
-  padding-bottom: 0;
+  background: linear-gradient(180deg, #393B3A 0%, #656362 18.27%, #E8E6E4 42.31%, #E3E2E0 62.98%, #9BA0A1 76.44%, #797E80 90.38%, #9CA19E 100%);
+  box-shadow: inset 0px 0px 6px #000000;
 }
 
 .metallic-btn:disabled {
@@ -379,7 +344,7 @@ body::before {
   cursor: not-allowed;
 }
 
-.metallic-btn:disabled > span {
+.metallic-btn:disabled > span:last-child {
   opacity: 0.5;
 }
 
@@ -399,10 +364,12 @@ body::before {
 /* rewind — rounded left, flat right */
 .metallic-btn.prev-btn::before { border-radius: 40px 8px 8px 40px; }
 .metallic-btn.prev-btn::after  { border-radius: 36px 4px 4px 36px; }
+.metallic-btn.prev-btn > .metallic-btn-gloss { border-radius: 40px 8px 8px 40px; }
 
 /* forward — flat left, rounded right */
 .metallic-btn.next-btn::before { border-radius: 8px 40px 40px 8px; }
 .metallic-btn.next-btn::after  { border-radius: 4px 36px 36px 4px; }
+.metallic-btn.next-btn > .metallic-btn-gloss { border-radius: 8px 40px 40px 8px; }
 
 /* side switch: pill shape, shorter */
 .metallic-btn.switch-btn {
@@ -418,15 +385,12 @@ body::before {
   border-radius: 36px;
 }
 
-.metallic-btn.switch-btn > span {
-  padding-bottom: 2px;
-  padding-left: 20px;
-  padding-right: 20px;
+.metallic-btn.switch-btn > .metallic-btn-gloss {
+  border-radius: 40px;
 }
 
-.metallic-btn.switch-btn:not(:disabled):active > span {
-  padding-top: 4px;
-  padding-bottom: 0;
+.metallic-btn.switch-btn > span:last-child {
+  padding-bottom: 2px;
   padding-left: 20px;
   padding-right: 20px;
 }

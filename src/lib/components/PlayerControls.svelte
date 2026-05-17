@@ -48,12 +48,12 @@
   }
 
   .play-wrap {
-    margin-bottom: 1px;
+    margin-top: 4px;
   }
 
   /* 2px between the three metallic control buttons */
   .controls :global(.metallic-btn) {
-    margin-left: 2px;
+    margin-left: 4px;
   }
 
   /* 8px gap between red button and rewind */
