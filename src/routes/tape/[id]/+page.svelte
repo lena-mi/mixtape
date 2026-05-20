@@ -10,12 +10,19 @@
   let isPlaying = $state(false)
   let isLoaded = $state(false)
   let player: any = null
+  let audioEl: HTMLAudioElement | null = $state(null)
 
   const tracksA = $derived(data.tracks.filter(t => !t.side || t.side === 'a'))
   const tracksB = $derived(data.tracks.filter(t => t.side === 'b'))
   const allTracks = $derived([...tracksA, ...tracksB])
   const midpoint = $derived(tracksA.length)
   const currentSide = $derived(currentTrackIndex < midpoint ? 'A' : 'B')
+  const currentTrack = $derived(allTracks[currentTrackIndex])
+  const isAudioTrack = $derived(
+    currentTrack?.source_type === 'google_drive' ||
+    currentTrack?.source_type === 'web_url' ||
+    currentTrack?.source_type === 'dropbox'
+  )
 
   function getVideoId(index: number): string {
     return allTracks[index]?.storage_path ?? ''
@@ -23,26 +30,39 @@
 
   function goToTrack(index: number) {
     currentTrackIndex = index
-    if (!player) return
-    const videoId = getVideoId(index)
-    if (!videoId) return
-    if (isPlaying) {
-      player.loadVideoById(videoId)
+    const track = allTracks[index]
+    if (!track) return
+    const isAudio = track.source_type === 'google_drive' || track.source_type === 'web_url' || track.source_type === 'dropbox'
+    if (isAudio) {
+      if (audioEl) {
+        audioEl.src = track.storage_path
+        if (isPlaying) audioEl.play().catch(() => {})
+      }
     } else {
-      player.cueVideoById(videoId)
+      if (!player) return
+      const videoId = track.storage_path ?? ''
+      if (!videoId) return
+      if (isPlaying) player.loadVideoById(videoId)
+      else player.cueVideoById(videoId)
     }
   }
 
   function play() {
-    if (!player) return
     isPlaying = true
-    player.playVideo()
+    if (isAudioTrack) {
+      audioEl?.play().catch(() => {})
+    } else {
+      player?.playVideo()
+    }
   }
 
   function stop() {
-    if (!player) return
     isPlaying = false
-    player.pauseVideo()
+    if (isAudioTrack) {
+      audioEl?.pause()
+    } else {
+      player?.pauseVideo()
+    }
   }
 
   function sideEnd() {
@@ -87,29 +107,36 @@
   }
 
   onMount(() => {
-    const initPlayer = () => {
-      player = new (window as any).YT.Player('youtube-player', {
-        height: '1',
-        width: '1',
-        videoId: getVideoId(0),
-        playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1 },
-        events: {
-          onReady: () => { isLoaded = true },
-          onStateChange: onYoutubeStateChange
-        }
-      })
-    }
+    const hasYoutubeTracks = allTracks.some(t => !t.source_type || t.source_type === 'youtube')
 
-    if ((window as any).YT?.Player) {
-      initPlayer()
-    } else {
-      ;(window as any).onYouTubeIframeAPIReady = initPlayer
-      if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-        const tag = document.createElement('script')
-        tag.src = 'https://www.youtube.com/iframe_api'
-        document.head.appendChild(tag)
+    if (hasYoutubeTracks) {
+      const initPlayer = () => {
+        const firstYt = allTracks.find(t => !t.source_type || t.source_type === 'youtube')
+        player = new (window as any).YT.Player('youtube-player', {
+          height: '1',
+          width: '1',
+          videoId: firstYt?.storage_path ?? '',
+          playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1 },
+          events: {
+            onReady: () => { if (!isAudioTrack) isLoaded = true },
+            onStateChange: onYoutubeStateChange
+          }
+        })
+      }
+
+      if ((window as any).YT?.Player) {
+        initPlayer()
+      } else {
+        ;(window as any).onYouTubeIframeAPIReady = initPlayer
+        if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+          const tag = document.createElement('script')
+          tag.src = 'https://www.youtube.com/iframe_api'
+          document.head.appendChild(tag)
+        }
       }
     }
+
+    if (isAudioTrack) isLoaded = true
 
     return () => { if (player?.destroy) player.destroy() }
   })
@@ -117,6 +144,17 @@
 
 <div style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;" aria-hidden="true">
   <div id="youtube-player"></div>
+  <!-- svelte-ignore a11y_media_has_caption -->
+  <audio
+    bind:this={audioEl}
+    src={isAudioTrack ? currentTrack?.storage_path : undefined}
+    onended={() => {
+      const nextIdx = currentTrackIndex + 1
+      if (nextIdx <= sideEnd()) goToTrack(nextIdx)
+      else isPlaying = false
+    }}
+    oncanplay={() => { if (isAudioTrack) isLoaded = true }}
+  ></audio>
 </div>
 
 <main class="tape-page">

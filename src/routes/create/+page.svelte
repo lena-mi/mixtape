@@ -129,7 +129,7 @@
     let artist = ''
     let storagePath = ''
     let sourceUrl = url
-    let sourceType: 'youtube' | 'web_url' = 'youtube'
+    let sourceType: 'youtube' | 'web_url' | 'google_drive' = 'youtube'
     let duration = 0
 
     if (hint) {
@@ -137,7 +137,7 @@
       artist = hint.artist
       storagePath = hint.resolvedUrl
       sourceUrl = url
-      sourceType = 'web_url'
+      sourceType = hint.sourceType === 'google_drive' ? 'google_drive' : 'web_url'
       duration = hint.duration
     } else {
       const videoId = extractVideoId(url)

@@ -58,8 +58,42 @@
     } else {
       trackState = 'probing'
       errorMessage = ''
+      const { resolvedUrl, sourceType } = rewriteAudioUrl(rawUrl)
+
+      if (sourceType === 'google_drive') {
+        const gdId = rawUrl.match(/drive\.google\.com\/file\/d\/([^/?#]+)/)?.[1] ?? ''
+        const [metaResult, probeResult] = await Promise.allSettled([
+          gdId ? fetch(`/api/gdrive-meta?id=${gdId}`).then(r => r.json()) : Promise.resolve({ filename: '', duration: 0 }),
+          probeAudio(resolvedUrl, 20000),
+        ])
+        const meta = metaResult.status === 'fulfilled' ? metaResult.value : { filename: '', duration: 0 }
+        const duration = (meta.duration > 0)
+          ? meta.duration
+          : (probeResult.status === 'fulfilled' ? probeResult.value.duration : 0)
+        if (duration > SIDE_LIMIT) {
+          errorMessage = `This track is ${formatDuration(duration)} — longer than 45 minutes`
+          trackState = 'error'
+          return
+        }
+        try {
+          const result = await oncommit(rawUrl, {
+            title: meta.filename || 'Google Drive track',
+            artist: '',
+            resolvedUrl,
+            sourceType: 'google_drive',
+            duration,
+          })
+          title = result.title
+          artist = result.artist
+          trackState = 'filled'
+        } catch (e) {
+          errorMessage = e instanceof Error ? e.message : 'Could not save this track'
+          trackState = 'error'
+        }
+        return
+      }
+
       try {
-        const { resolvedUrl, sourceType } = rewriteAudioUrl(rawUrl)
         const { duration } = await probeAudio(resolvedUrl)
         if (duration > SIDE_LIMIT) {
           errorMessage = `This track is ${formatDuration(duration)} — longer than 45 minutes`
@@ -74,12 +108,11 @@
       } catch (e) {
         if (e instanceof Error && e.message !== 'invalid_duration' && e.message !== 'load_error' && e.message !== 'timeout') {
           errorMessage = e.message
-        } else if (rewriteAudioUrl(rawUrl).sourceType === 'google_drive') {
-          errorMessage = "Couldn't load this file. Google Drive links can be unreliable — try Dropbox or a direct file link instead."
+          trackState = 'error'
         } else {
           errorMessage = "Couldn't load this file. It may be private, or the host may block external playback."
+          trackState = 'error'
         }
-        trackState = 'error'
       }
     }
   }

@@ -61,8 +61,9 @@ export const actions: Actions = {
     if (!storagePath) return fail(400, { error: 'Please provide a track source' })
 
     const durationSeconds = parseInt(data.get('duration_seconds') as string) || 0
+    const isGoogleDrive = sourceType === 'google_drive'
 
-    if (durationSeconds <= 0) return fail(422, { error: "Couldn't resolve track duration" })
+    if (!isGoogleDrive && durationSeconds <= 0) return fail(422, { error: "Couldn't resolve track duration" })
     if (durationSeconds > 2700) return fail(422, { error: 'Track exceeds 45-minute limit' })
 
     const { data: sideTracks } = await supabaseAdmin
@@ -72,7 +73,7 @@ export const actions: Actions = {
       .eq('side', side)
 
     const sideTotal = (sideTracks ?? []).reduce((s: number, t: any) => s + (t.duration_seconds ?? 0), 0)
-    if (sideTotal + durationSeconds > 2700) {
+    if (!isGoogleDrive && sideTotal + durationSeconds > 2700) {
       return fail(422, { error: `Side ${side.toUpperCase()} would exceed 45 minutes` })
     }
 
