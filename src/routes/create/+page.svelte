@@ -3,7 +3,11 @@
   import { untrack } from 'svelte'
   import { invalidateAll } from '$app/navigation'
   import TrackInput from '$lib/components/TrackInput.svelte'
+  import type { CommitHint } from '$lib/utils/audioUrl'
+  import { extractVideoId, formatDuration } from '$lib/utils/audioUrl'
   import cassette from '$lib/assets/Casette-empty.png'
+
+  const SIDE_LIMIT = 2700
 
   let { data }: { data: PageData } = $props()
 
@@ -22,6 +26,7 @@
     trackId?: string
     savedTitle?: string
     savedArtist?: string
+    savedDuration?: number
     locked?: boolean
   }
 
@@ -45,6 +50,7 @@
       trackId: t.id,
       savedTitle: t.title,
       savedArtist: t.artist ?? '',
+      savedDuration: (t as any).duration_seconds ?? 0,
       locked: i === 0,
     }))
   }
@@ -56,60 +62,148 @@
   let slotsA = $state<Slot[]>(makeSlots(tracksA))
   let slotsB = $state<Slot[]>(makeSlots(tracksB))
 
-  function extractVideoId(url: string): string | null {
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube-nocookie\.com\/embed\/)([^&\n?#]+)/,
-      /^([a-zA-Z0-9_-]{11})$/,
-    ]
-    for (const p of patterns) {
-      const m = url.match(p)
-      if (m) return m[1]
-    }
-    return null
-  }
+  const sideASeconds = $derived(slotsA.reduce((s, slot) => s + (slot.savedDuration ?? 0), 0))
+  const sideBSeconds = $derived(slotsB.reduce((s, slot) => s + (slot.savedDuration ?? 0), 0))
 
-  async function handleCommit(slotKey: number, url: string, side: Side): Promise<{ title: string; artist: string }> {
-    const videoId = extractVideoId(url)
-    if (!videoId) throw new Error('Invalid YouTube URL')
+  function probeYtDuration(videoId: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      let settled = false
+      let ytPlayer: any = null
 
-    let title = ''
-    let artist = ''
-    try {
-      const res = await fetch(
-        `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+      const container = document.createElement('div')
+      document.body.appendChild(container)
+
+      const done = (fn: () => void) => {
+        if (settled) return
+        settled = true
+        fn()
+        setTimeout(() => { ytPlayer?.destroy(); container.remove() }, 0)
+      }
+
+      const timer = setTimeout(
+        () => done(() => reject(new Error('Could not load this video'))),
+        10_000
       )
-      if (res.ok) {
-        const oembed = await res.json()
-        const videoTitle = oembed.title as string
-        const sep = videoTitle.indexOf(' - ')
-        if (sep !== -1) {
-          artist = videoTitle.slice(0, sep).trim()
-          title = videoTitle.slice(sep + 3).trim()
-        } else {
-          title = videoTitle
-          artist = (oembed.author_name as string) ?? ''
+
+      const probe = () => {
+        ytPlayer = new (window as any).YT.Player(container, {
+          height: '1',
+          width: '1',
+          videoId,
+          playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, playsinline: 1 },
+          events: {
+            onReady: () => {
+              const dur: number = ytPlayer.getDuration()
+              if (isFinite(dur) && dur > 0) { clearTimeout(timer); done(() => resolve(dur)) }
+            },
+            onStateChange: (e: any) => {
+              if (e.data === 5) { // cued — getDuration() is reliable here
+                const dur: number = ytPlayer.getDuration()
+                if (isFinite(dur) && dur > 0) { clearTimeout(timer); done(() => resolve(dur)) }
+              }
+            },
+            onError: () => {
+              clearTimeout(timer)
+              done(() => reject(new Error('This video is unavailable or private')))
+            },
+          },
+        })
+      }
+
+      if ((window as any).YT?.Player) {
+        probe()
+      } else {
+        const prev = (window as any).onYouTubeIframeAPIReady
+        ;(window as any).onYouTubeIframeAPIReady = () => { if (prev) prev(); probe() }
+        if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
+          const tag = document.createElement('script')
+          tag.src = 'https://www.youtube.com/iframe_api'
+          document.head.appendChild(tag)
         }
       }
-    } catch { /* oEmbed failed */ }
+    })
+  }
 
-    if (!title) title = videoId
+  async function handleCommit(slotKey: number, url: string, side: Side, hint?: CommitHint): Promise<{ title: string; artist: string }> {
+    let title = ''
+    let artist = ''
+    let storagePath = ''
+    let sourceUrl = url
+    let sourceType: 'youtube' | 'web_url' = 'youtube'
+    let duration = 0
+
+    if (hint) {
+      title = hint.title
+      artist = hint.artist
+      storagePath = hint.resolvedUrl
+      sourceUrl = url
+      sourceType = 'web_url'
+      duration = hint.duration
+    } else {
+      const videoId = extractVideoId(url)
+      if (!videoId) throw new Error('Invalid YouTube URL')
+
+      const [durationResult, oembedResult] = await Promise.allSettled([
+        probeYtDuration(videoId),
+        fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null),
+      ])
+
+      if (durationResult.status === 'rejected') {
+        throw durationResult.reason instanceof Error ? durationResult.reason : new Error('Could not load this video')
+      }
+      duration = durationResult.value
+
+      const oembed = oembedResult.status === 'fulfilled' ? oembedResult.value : null
+      if (oembed?.title) {
+        const sep = (oembed.title as string).indexOf(' - ')
+        if (sep !== -1) {
+          artist = (oembed.title as string).slice(0, sep).trim()
+          title = (oembed.title as string).slice(sep + 3).trim()
+        } else {
+          title = oembed.title as string
+          artist = oembed.author_name ?? ''
+        }
+      }
+
+      if (!title) title = videoId
+      storagePath = videoId
+      sourceUrl = `https://www.youtube.com/watch?v=${videoId}`
+    }
+
+    if (duration > SIDE_LIMIT) {
+      throw new Error(`This track is ${formatDuration(duration)} — longer than 45 minutes`)
+    }
+
+    const slots = side === 'a' ? slotsA : slotsB
+    const existingTotal = slots.reduce((s, slot) => s + (slot.savedDuration ?? 0), 0)
+    if (existingTotal + duration > SIDE_LIMIT) {
+      throw new Error(`Side ${side.toUpperCase()} only has ${formatDuration(SIDE_LIMIT - existingTotal)} left`)
+    }
 
     const formData = new FormData()
     formData.append('tape_id', data.tape.id)
-    formData.append('youtube_id', videoId)
-    formData.append('youtube_url', `https://www.youtube.com/watch?v=${videoId}`)
     formData.append('title', title)
     formData.append('artist', artist)
+    formData.append('storage_path', storagePath)
+    formData.append('source_url', sourceUrl)
+    formData.append('source_type', sourceType)
+    formData.append('duration_seconds', String(Math.round(duration)))
     formData.append('side', side)
 
     const response = await fetch('?/addTrack', { method: 'POST', body: formData })
-    if (!response.ok) throw new Error('Failed to save track')
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}))
+      throw new Error(body.error ?? 'Failed to save track')
+    }
+
+    const slot = slots.find(s => s.key === slotKey)
+    if (slot) slot.savedDuration = Math.round(duration)
 
     await invalidateAll()
 
-    const slots = side === 'a' ? slotsA : slotsB
-    const saved = [...data.tracks].reverse().find(t => t.storage_path === videoId && t.side === side)
-    const slot = slots.find(s => s.key === slotKey)
+    const saved = [...data.tracks].reverse().find(t => t.storage_path === storagePath && t.side === side)
     if (slot && saved) slot.trackId = saved.id
 
     return { title, artist }
@@ -173,8 +267,23 @@
   <div class="sides">
     {#each (['a', 'b'] as Side[]) as side (side)}
       {@const slots = side === 'a' ? slotsA : slotsB}
+      {@const sideSeconds = side === 'a' ? sideASeconds : sideBSeconds}
+      {@const remaining = SIDE_LIMIT - sideSeconds}
       <div class="side-group">
-        <p class="side-label">Side {side.toUpperCase()}</p>
+        <div class="side-header">
+          <p class="side-label">Side {side.toUpperCase()}</p>
+          <span class="side-time" class:near-full={remaining < 120}>
+            {#if remaining < 120}
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.871l-8.106 -13.534a1.914 1.914 0 0 0 -3.274 0z"/>
+                <path d="M12 9v4"/>
+                <path d="M12 16h.01"/>
+              </svg>
+            {/if}
+            {formatDuration(sideSeconds)} / 45:00
+          </span>
+        </div>
         <div class="side-content">
           <div class="slots-container">
             {#each slots as slot (slot.key)}
@@ -185,12 +294,10 @@
                     initialState={slot.savedTitle ? 'filled' : 'idle'}
                     initialTitle={slot.savedTitle ?? ''}
                     initialArtist={slot.savedArtist ?? ''}
-                    oncommit={(url) => handleCommit(slot.key, url, side)}
+                    oncommit={(url, hint) => handleCommit(slot.key, url, side, hint)}
                   />
                 </div>
-                {#if slot.locked}
-                  <div class="slot-spacer"></div>
-                {:else}
+                {#if !slot.locked}
                   <button
                     class="slot-delete"
                     onclick={() => handleDelete(slot.key, side)}
@@ -200,10 +307,7 @@
               </div>
             {/each}
           </div>
-          <div class="slot-row">
-            <button class="btn btn-outline add-btn" onclick={() => addSlot(side)}>+ Track</button>
-            <div class="slot-spacer"></div>
-          </div>
+          <button class="btn btn-outline add-btn" onclick={() => addSlot(side)}>+ Track</button>
         </div>
       </div>
     {/each}
@@ -218,7 +322,7 @@
 
 <style>
   .page {
-    max-width: 600px;
+    max-width: calc(500px + 2 * var(--space-6));
     margin: 0 auto;
     padding: var(--space-8) var(--space-6);
     display: flex;
@@ -312,6 +416,12 @@
     gap: var(--space-4);
   }
 
+  .side-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
   .side-label {
     font-family: var(--font-label);
     font-weight: 400;
@@ -320,6 +430,23 @@
     letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--color-black);
+  }
+
+  .side-time {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-xs);
+    color: var(--color-gray-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .side-time.near-full {
+    background: #ebebeb;
+    color: var(--color-gray-secondary);
+    padding: 3px var(--space-2);
+    border-radius: var(--radius-md);
   }
 
   .side-content {
@@ -334,26 +461,19 @@
   }
 
   .slot-row {
-    display: flex;
-    align-items: stretch;
-    gap: var(--space-3);
+    position: relative;
   }
 
   .slot-input {
-    flex: 1;
-    min-width: 0;
     display: flex;
     flex-direction: column;
   }
 
-  .slot-spacer {
-    flex-shrink: 0;
-    width: var(--space-8);
-  }
-
   .slot-delete {
-    flex-shrink: 0;
-    align-self: center;
+    position: absolute;
+    right: calc(-1 * (var(--space-3) + var(--space-8)));
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
     border: 1px solid var(--color-gray-border);
     border-radius: var(--radius-md);
@@ -374,7 +494,7 @@
   }
 
   .add-btn {
-    flex: 1;
+    width: 100%;
   }
 
   .page-footer {

@@ -52,12 +52,29 @@ export const actions: Actions = {
 
     const title = data.get('title') as string
     const artist = data.get('artist') as string
-    const youtubeId = data.get('youtube_id') as string
-    const youtubeUrl = data.get('youtube_url') as string
+    const storagePath = data.get('storage_path') as string
+    const sourceUrl = data.get('source_url') as string
+    const sourceType = (data.get('source_type') as string) || 'youtube'
     const side = (data.get('side') as string) || 'a'
 
     if (!title) return fail(400, { error: 'Please add a track title' })
-    if (!youtubeId) return fail(400, { error: 'Please provide a YouTube video ID' })
+    if (!storagePath) return fail(400, { error: 'Please provide a track source' })
+
+    const durationSeconds = parseInt(data.get('duration_seconds') as string) || 0
+
+    if (durationSeconds <= 0) return fail(422, { error: "Couldn't resolve track duration" })
+    if (durationSeconds > 2700) return fail(422, { error: 'Track exceeds 45-minute limit' })
+
+    const { data: sideTracks } = await supabaseAdmin
+      .from('tracks')
+      .select('duration_seconds')
+      .eq('tape_id', tapeId)
+      .eq('side', side)
+
+    const sideTotal = (sideTracks ?? []).reduce((s: number, t: any) => s + (t.duration_seconds ?? 0), 0)
+    if (sideTotal + durationSeconds > 2700) {
+      return fail(422, { error: `Side ${side.toUpperCase()} would exceed 45 minutes` })
+    }
 
     const { count } = await supabaseAdmin
       .from('tracks')
@@ -71,9 +88,10 @@ export const actions: Actions = {
         tape_id: tapeId,
         title,
         artist,
-        storage_path: youtubeId,
-        source_url: youtubeUrl,
-        source_type: 'youtube',
+        storage_path: storagePath,
+        source_url: sourceUrl,
+        source_type: sourceType,
+        duration_seconds: durationSeconds,
         side,
         position: count ?? 0,
       })
@@ -102,6 +120,29 @@ export const actions: Actions = {
 
   share: async ({ cookies }) => {
     const tapeId = cookies.get('draft_tape_id')
+    if (!tapeId) return fail(400, { error: 'No active tape' })
+
+    const { data: tracks } = await supabaseAdmin
+      .from('tracks')
+      .select('side, duration_seconds')
+      .eq('tape_id', tapeId)
+
+    const sum = (s: string) =>
+      (tracks ?? [])
+        .filter((t: any) => !t.side || t.side === s)
+        .reduce((acc: number, t: any) => acc + (t.duration_seconds ?? 0), 0)
+
+    const sideA = sum('a')
+    const sideB = sum('b')
+
+    if (sideA > 2700 || sideB > 2700) {
+      return fail(422, {
+        error: 'Side limit exceeded',
+        sideA,
+        sideB,
+      })
+    }
+
     cookies.delete('draft_tape_id', { path: '/' })
     redirect(303, `/tape/${tapeId}`)
   },
