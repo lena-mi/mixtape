@@ -3,47 +3,32 @@
   import cassette from '$lib/assets/Casette-empty.png'
   import { onMount } from 'svelte'
   import PlayerControls from '$lib/components/PlayerControls.svelte'
+  import DrawingCanvas from '$lib/components/DrawingCanvas.svelte'
 
   let { data }: { data: PageData } = $props()
 
   let currentTrackIndex = $state(0)
   let isPlaying = $state(false)
-  let isLoaded = $state(false)
-  let player: any = null
+  let ytLoaded = $state(false)
+  let ytPlayer: any = null
+  let audioEl = $state<HTMLAudioElement | null>(null)
 
   const tracksA = $derived(data.tracks.filter(t => !t.side || t.side === 'a'))
   const tracksB = $derived(data.tracks.filter(t => t.side === 'b'))
   const allTracks = $derived([...tracksA, ...tracksB])
   const midpoint = $derived(tracksA.length)
   const currentSide = $derived(currentTrackIndex < midpoint ? 'A' : 'B')
+  const currentTrack = $derived(allTracks[currentTrackIndex])
+  const isYoutube = $derived(currentTrack?.source_type !== 'web_url')
+  const isLoaded = $derived(isYoutube ? ytLoaded : audioEl !== null)
+  let failedTrackIds = $state(new Set<string>())
 
-  function getVideoId(index: number): string {
-    return allTracks[index]?.storage_path ?? ''
-  }
-
-  function goToTrack(index: number) {
-    currentTrackIndex = index
-    if (!player) return
-    const videoId = getVideoId(index)
-    if (!videoId) return
-    if (isPlaying) {
-      player.loadVideoById(videoId)
-    } else {
-      player.cueVideoById(videoId)
+  $effect(() => {
+    const el = audioEl
+    if (!isYoutube && el && currentTrack?.storage_path) {
+      el.src = currentTrack.storage_path
     }
-  }
-
-  function play() {
-    if (!player) return
-    isPlaying = true
-    player.playVideo()
-  }
-
-  function stop() {
-    if (!player) return
-    isPlaying = false
-    player.pauseVideo()
-  }
+  })
 
   function sideEnd() {
     return currentSide === 'A' ? midpoint - 1 : allTracks.length - 1
@@ -51,6 +36,37 @@
 
   function sideStart() {
     return currentSide === 'A' ? 0 : midpoint
+  }
+
+  function goToTrack(index: number) {
+    currentTrackIndex = index
+    const track = allTracks[index]
+    if (!track) return
+
+    if (track.source_type === 'web_url') {
+      if (audioEl) {
+        audioEl.src = track.storage_path
+        if (isPlaying) audioEl.play().catch(() => {})
+      }
+    } else {
+      audioEl?.pause()
+      if (ytPlayer) {
+        if (isPlaying) ytPlayer.loadVideoById(track.storage_path)
+        else ytPlayer.cueVideoById(track.storage_path)
+      }
+    }
+  }
+
+  function play() {
+    isPlaying = true
+    if (isYoutube) ytPlayer?.playVideo()
+    else audioEl?.play().catch(() => {})
+  }
+
+  function stop() {
+    isPlaying = false
+    if (isYoutube) ytPlayer?.pauseVideo()
+    else audioEl?.pause()
   }
 
   function next() {
@@ -69,13 +85,27 @@
     goToTrack(targetIndex)
   }
 
+  function handleAudioEnded() {
+    if (!isPlaying) return
+    const nextIdx = currentTrackIndex + 1
+    if (nextIdx <= sideEnd()) {
+      goToTrack(nextIdx)
+    } else {
+      isPlaying = false
+    }
+  }
+
+  function handleAudioError() {
+    const id = currentTrack?.id
+    if (id) failedTrackIds = new Set([...failedTrackIds, id])
+    isPlaying = false
+  }
+
   function onYoutubeStateChange(event: any) {
     if (event.data === 0 && isPlaying) {
       const nextIdx = currentTrackIndex + 1
       if (nextIdx <= sideEnd()) {
-        currentTrackIndex = nextIdx
-        const videoId = getVideoId(nextIdx)
-        if (player && videoId) player.loadVideoById(videoId)
+        goToTrack(nextIdx)
       } else {
         isPlaying = false
       }
@@ -87,15 +117,22 @@
   }
 
   onMount(() => {
+    const firstYtVideoId = allTracks.find(t => t.source_type !== 'web_url')?.storage_path ?? ''
+
     const initPlayer = () => {
-      player = new (window as any).YT.Player('youtube-player', {
+      ytPlayer = new (window as any).YT.Player('youtube-player', {
         height: '1',
         width: '1',
-        videoId: getVideoId(0),
+        videoId: firstYtVideoId,
         playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, modestbranding: 1, playsinline: 1 },
         events: {
-          onReady: () => { isLoaded = true },
-          onStateChange: onYoutubeStateChange
+          onReady: () => { ytLoaded = true },
+          onStateChange: onYoutubeStateChange,
+          onError: () => {
+            const id = currentTrack?.id
+            if (id) failedTrackIds = new Set([...failedTrackIds, id])
+            isPlaying = false
+          },
         }
       })
     }
@@ -111,12 +148,15 @@
       }
     }
 
-    return () => { if (player?.destroy) player.destroy() }
+    return () => { if (ytPlayer?.destroy) ytPlayer.destroy() }
   })
 </script>
 
+<DrawingCanvas tapeId={data.tape.id} initialOps={(data.tape as any).canvas_state ?? []} />
+
 <div style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;" aria-hidden="true">
   <div id="youtube-player"></div>
+  <audio bind:this={audioEl} onended={handleAudioEnded} onerror={handleAudioError}></audio>
 </div>
 
 <main class="tape-page">
@@ -160,7 +200,7 @@
           <button class="track-item" class:active={i === currentTrackIndex} onclick={() => goToTrack(i)}>
             <span class="track-number">{i + 1}.</span>
             <span class="track-title">{track.title}</span>
-            {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
+            {#if failedTrackIds.has(track.id)}<span class="track-unavailable">unavailable</span>{/if}
           </button>
         {/each}
       </div>
@@ -171,7 +211,7 @@
           <button class="track-item" class:active={midpoint + i === currentTrackIndex} onclick={() => goToTrack(midpoint + i)}>
             <span class="track-number">{i + 1}.</span>
             <span class="track-title">{track.title}</span>
-            {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
+            {#if failedTrackIds.has(track.id)}<span class="track-unavailable">unavailable</span>{/if}
           </button>
         {/each}
       </div>
@@ -183,6 +223,8 @@
   .tape-page {
     min-height: 100vh;
     padding: var(--space-6);
+    position: relative;
+    z-index: 1;
   }
 
   .tape-header {
@@ -271,7 +313,6 @@
     color: var(--color-gray-muted);
   }
 
-
   .track-item {
     padding: var(--space-2) var(--space-3);
     display: flex;
@@ -308,10 +349,11 @@
     letter-spacing: var(--tracking-base);
   }
 
-  .track-artist {
-    font-size: var(--text-sm);
-    letter-spacing: var(--tracking-sm);
-    color: var(--color-gray-secondary);
+  .track-unavailable {
+    margin-left: auto;
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-xs);
+    color: var(--color-gray-muted);
     font-style: italic;
   }
 
