@@ -198,7 +198,6 @@
           <button class="track-item" class:active={i === currentTrackIndex} onclick={() => goToTrack(i)}>
             <span class="track-number">{i + 1}.</span>
             <span class="track-title">{track.title}</span>
-            {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
           </button>
         {/each}
       </div>
@@ -209,7 +208,6 @@
           <button class="track-item" class:active={midpoint + i === currentTrackIndex} onclick={() => goToTrack(midpoint + i)}>
             <span class="track-number">{i + 1}.</span>
             <span class="track-title">{track.title}</span>
-            {#if track.artist}<span class="track-artist">— {track.artist}</span>{/if}
           </button>
         {/each}
       </div>
@@ -344,13 +342,6 @@
     flex: 1;
     font-size: var(--text-base);
     letter-spacing: var(--tracking-base);
-  }
-
-  .track-artist {
-    font-size: var(--text-sm);
-    letter-spacing: var(--tracking-sm);
-    color: var(--color-gray-secondary);
-    font-style: italic;
   }
 
   @media (max-width: 500px) {

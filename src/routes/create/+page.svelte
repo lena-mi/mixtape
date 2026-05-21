@@ -25,7 +25,6 @@
     key: number
     trackId?: string
     savedTitle?: string
-    savedArtist?: string
     savedDuration?: number
     locked?: boolean
   }
@@ -49,7 +48,6 @@
       key: keySeq++,
       trackId: t.id,
       savedTitle: t.title,
-      savedArtist: t.artist ?? '',
       savedDuration: (t as any).duration_seconds ?? 0,
       locked: i === 0,
     }))
@@ -124,9 +122,8 @@
     })
   }
 
-  async function handleCommit(slotKey: number, url: string, side: Side, hint?: CommitHint): Promise<{ title: string; artist: string }> {
+  async function handleCommit(slotKey: number, url: string, side: Side, hint?: CommitHint): Promise<{ title: string }> {
     let title = ''
-    let artist = ''
     let storagePath = ''
     let sourceUrl = url
     let sourceType: 'youtube' | 'web_url' | 'google_drive' = 'youtube'
@@ -134,7 +131,6 @@
 
     if (hint) {
       title = hint.title
-      artist = hint.artist
       storagePath = hint.resolvedUrl
       sourceUrl = url
       sourceType = hint.sourceType === 'google_drive' ? 'google_drive' : 'web_url'
@@ -157,14 +153,7 @@
 
       const oembed = oembedResult.status === 'fulfilled' ? oembedResult.value : null
       if (oembed?.title) {
-        const sep = (oembed.title as string).indexOf(' - ')
-        if (sep !== -1) {
-          artist = (oembed.title as string).slice(0, sep).trim()
-          title = (oembed.title as string).slice(sep + 3).trim()
-        } else {
-          title = oembed.title as string
-          artist = oembed.author_name ?? ''
-        }
+        title = oembed.title as string
       }
 
       if (!title) title = videoId
@@ -185,7 +174,6 @@
     const formData = new FormData()
     formData.append('tape_id', data.tape.id)
     formData.append('title', title)
-    formData.append('artist', artist)
     formData.append('storage_path', storagePath)
     formData.append('source_url', sourceUrl)
     formData.append('source_type', sourceType)
@@ -206,7 +194,7 @@
     const saved = [...data.tracks].reverse().find(t => t.storage_path === storagePath && t.side === side)
     if (slot && saved) slot.trackId = saved.id
 
-    return { title, artist }
+    return { title }
   }
 
   async function handleDelete(slotKey: number, side: Side) {
@@ -293,7 +281,6 @@
                     index={slots.indexOf(slot) + 1}
                     initialState={slot.savedTitle ? 'filled' : 'idle'}
                     initialTitle={slot.savedTitle ?? ''}
-                    initialArtist={slot.savedArtist ?? ''}
                     oncommit={(url, hint) => handleCommit(slot.key, url, side, hint)}
                   />
                 </div>

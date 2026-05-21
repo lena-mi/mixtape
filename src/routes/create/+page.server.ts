@@ -51,7 +51,6 @@ export const actions: Actions = {
     if (!tapeId) return fail(400, { error: 'No active tape' })
 
     const title = data.get('title') as string
-    const artist = data.get('artist') as string
     const storagePath = data.get('storage_path') as string
     const sourceUrl = data.get('source_url') as string
     const sourceType = (data.get('source_type') as string) || 'youtube'
@@ -88,7 +87,6 @@ export const actions: Actions = {
       .insert({
         tape_id: tapeId,
         title,
-        artist,
         storage_path: storagePath,
         source_url: sourceUrl,
         source_type: sourceType,

@@ -15,7 +15,6 @@ export function extractVideoId(url: string): string | null {
 
 export type CommitHint = {
   title: string
-  artist: string
   resolvedUrl: string
   sourceType: AudioSourceType
   duration: number

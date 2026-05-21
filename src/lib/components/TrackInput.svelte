@@ -9,19 +9,16 @@
     oncommit,
     initialState = 'idle',
     initialTitle = '',
-    initialArtist = '',
   }: {
     index: number
-    oncommit?: (url: string, hint?: CommitHint) => Promise<{ title: string; artist: string }>
+    oncommit?: (url: string, hint?: CommitHint) => Promise<{ title: string }>
     initialState?: TrackState
     initialTitle?: string
-    initialArtist?: string
   } = $props()
 
   let trackState: TrackState = $state(initialState)
   let url = $state('')
   let title = $state(initialTitle)
-  let artist = $state(initialArtist)
   let renameValue = $state('')
   let nameValue = $state('')
   let probedDuration = $state(0)
@@ -32,7 +29,7 @@
 
   const SIDE_LIMIT = 2700
 
-  const displayText = $derived(artist ? `${title} — ${artist}` : title)
+  const displayText = $derived(title)
 
   $effect(() => {
     if (trackState === 'naming' && nameInputEl) nameInputEl.focus()
@@ -49,7 +46,6 @@
       try {
         const result = await oncommit(rawUrl)
         title = result.title
-        artist = result.artist
         trackState = 'filled'
       } catch (e) {
         errorMessage = e instanceof Error ? e.message : 'Could not load this track'
@@ -78,13 +74,11 @@
         try {
           const result = await oncommit(rawUrl, {
             title: meta.filename || 'Google Drive track',
-            artist: '',
             resolvedUrl,
             sourceType: 'google_drive',
             duration,
           })
           title = result.title
-          artist = result.artist
           trackState = 'filled'
         } catch (e) {
           errorMessage = e instanceof Error ? e.message : 'Could not save this track'
@@ -120,25 +114,15 @@
   async function confirmNaming() {
     if (!nameValue.trim() || !oncommit) return
 
-    let t = nameValue.trim()
-    let a = ''
-    const sep = t.indexOf('—')
-    if (sep !== -1) {
-      a = t.slice(0, sep).trim()
-      t = t.slice(sep + 1).trim()
-    }
-
     trackState = 'processing'
     try {
       const result = await oncommit(url.trim(), {
-        title: t,
-        artist: a,
+        title: nameValue.trim(),
         resolvedUrl: probedResolvedUrl,
         sourceType: probedSourceType,
         duration: probedDuration,
       })
       title = result.title
-      artist = result.artist
       trackState = 'filled'
     } catch (e) {
       errorMessage = e instanceof Error ? e.message : 'Could not save this track'
@@ -159,7 +143,6 @@
   function resetToIdle() {
     url = ''
     title = ''
-    artist = ''
     nameValue = ''
     probedDuration = 0
     probedResolvedUrl = ''
@@ -174,14 +157,7 @@
 
   function saveRename() {
     if (!renameValue.trim()) return
-    const sep = renameValue.indexOf('—')
-    if (sep !== -1) {
-      title = renameValue.slice(0, sep).trim()
-      artist = renameValue.slice(sep + 1).trim()
-    } else {
-      title = renameValue.trim()
-      artist = ''
-    }
+    title = renameValue.trim()
     trackState = 'filled'
   }
 
