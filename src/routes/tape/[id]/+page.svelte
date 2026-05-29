@@ -169,7 +169,12 @@
     <div class="cassette-wrap">
       <img src={cassette} alt="Cassette tape" class="cassette-image" />
       {#if data.tape.cover_url}
-        <img src={data.tape.cover_url} alt="Cover" class="cover-image" />
+        <img
+          src={data.tape.cover_url}
+          alt="Cover"
+          class="cover-image"
+          style="object-position: {(data.tape as any).cover_position ?? '50% 50%'}"
+        />
       {/if}
     </div>
   </div>

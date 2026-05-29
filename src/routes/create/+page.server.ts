@@ -114,7 +114,8 @@ export const actions: Actions = {
     const tapeId = (data.get('tape_id') as string) || cookies.get('draft_tape_id')
     if (!tapeId) return fail(400, { error: 'No active tape' })
     const coverUrl = (data.get('cover_url') as string).trim() || null
-    await supabaseAdmin.from('tapes').update({ cover_url: coverUrl }).eq('id', tapeId)
+    const coverPosition = (data.get('cover_position') as string).trim() || null
+    await supabaseAdmin.from('tapes').update({ cover_url: coverUrl, cover_position: coverPosition }).eq('id', tapeId)
   },
 
   share: async ({ cookies }) => {

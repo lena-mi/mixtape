@@ -13,10 +13,46 @@
 
   let coverUrl = $state(untrack(() => data.tape.cover_url ?? ''))
 
+  function parseCoverPosition(pos: string | null | undefined): [number, number] {
+    if (!pos) return [50, 50]
+    const parts = pos.split(' ').map(v => parseFloat(v))
+    const x = isFinite(parts[0]) ? parts[0] : 50
+    const y = isFinite(parts[1]) ? parts[1] : 50
+    return [x, y]
+  }
+  const [initX, initY] = untrack(() => parseCoverPosition((data.tape as any).cover_position))
+  let coverPosX = $state(initX)
+  let coverPosY = $state(initY)
+
+  let coverDrag = $state<{ startX: number; startY: number; posX: number; posY: number } | null>(null)
+
+  function onCoverPointerDown(e: PointerEvent) {
+    if (!coverUrl) return
+    e.preventDefault()
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    coverDrag = { startX: e.clientX, startY: e.clientY, posX: coverPosX, posY: coverPosY }
+  }
+
+  function onCoverPointerMove(e: PointerEvent) {
+    if (!coverDrag) return
+    const el = e.currentTarget as HTMLElement
+    const dx = e.clientX - coverDrag.startX
+    const dy = e.clientY - coverDrag.startY
+    coverPosX = Math.max(0, Math.min(100, coverDrag.posX - (dx / el.offsetWidth) * 100))
+    coverPosY = Math.max(0, Math.min(100, coverDrag.posY - (dy / el.offsetHeight) * 100))
+  }
+
+  function onCoverPointerUp() {
+    if (!coverDrag) return
+    coverDrag = null
+    saveCover()
+  }
+
   async function saveCover() {
     const formData = new FormData()
     formData.append('tape_id', data.tape.id)
     formData.append('cover_url', coverUrl)
+    formData.append('cover_position', `${coverPosX}% ${coverPosY}%`)
     await fetch('?/updateCover', { method: 'POST', body: formData })
   }
 
@@ -236,10 +272,25 @@
   </header>
 
   <div class="cassette-preview">
-    <div class="cassette-frame">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="cassette-frame"
+      class:cover-draggable={!!coverUrl}
+      class:cover-dragging={!!coverDrag}
+      onpointerdown={onCoverPointerDown}
+      onpointermove={onCoverPointerMove}
+      onpointerup={onCoverPointerUp}
+      onpointercancel={onCoverPointerUp}
+    >
       <img src={cassette} alt="Cassette tape" class="cassette-img" />
       {#if coverUrl}
-        <img src={coverUrl} alt="Cover" class="cover-img" />
+        <img
+          src={coverUrl}
+          alt="Cover"
+          class="cover-img"
+          style="object-position: {coverPosX}% {coverPosY}%"
+          draggable="false"
+        />
       {/if}
     </div>
     <input
@@ -372,6 +423,9 @@
     max-width: 500px;
     width: 100%;
   }
+
+  .cassette-frame.cover-draggable { cursor: grab; }
+  .cassette-frame.cover-dragging  { cursor: grabbing; }
 
   .cassette-img {
     width: 100%;
