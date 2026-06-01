@@ -87,6 +87,7 @@
   function switchSide() {
     const targetIndex = currentSide === 'A' ? midpoint : 0
     if (targetIndex >= data.tracks.length) return
+    isPlaying = false
     goToTrack(targetIndex)
   }
 
@@ -102,8 +103,6 @@
       }
     } else if (event.data === 1) {
       isPlaying = true
-    } else if (event.data === 2) {
-      isPlaying = false
     }
   }
 
