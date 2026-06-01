@@ -264,8 +264,8 @@
     width: 100%;
     height: auto;
     display: block;
-    filter: drop-shadow(4px 10px 14px rgba(0, 0, 0, 0.35));
-    filter: drop-shadow(2px 4px 4px rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(10px 14px 14px rgba(73, 68, 61, 0.3));
+    
   }
 
   .cover-image {

@@ -293,14 +293,17 @@
         />
       {/if}
     </div>
-    <input
-      class="input cover-url-input"
-      type="url"
-      placeholder="Paste image URL for cover…"
-      bind:value={coverUrl}
-      onblur={saveCover}
-      onkeydown={(e) => e.key === 'Enter' && saveCover()}
-    />
+    <label class="cover-label">
+      J-card picture
+      <input
+        class="input cover-url-input"
+        type="url"
+        placeholder="Paste a link to any image"
+        bind:value={coverUrl}
+        onblur={saveCover}
+        onkeydown={(e) => e.key === 'Enter' && saveCover()}
+      />
+    </label>
   </div>
 
   <div class="sides">
@@ -431,6 +434,8 @@
     width: 100%;
     height: auto;
     display: block;
+    filter: drop-shadow(10px 14px 14px rgba(73, 68, 61, 0.3));
+    filter: drop-shadow(2px 4px 6px rgba(73, 68, 61, 0.3));
   }
 
   .cover-img {
@@ -442,6 +447,19 @@
     height: 286px;
     object-fit: cover;
     mix-blend-mode: multiply;
+  }
+
+  .cover-label {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: var(--tracking-xs);
+    text-transform: uppercase;
+    color: var(--color-gray-muted);
   }
 
 
