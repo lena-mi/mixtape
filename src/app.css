@@ -23,6 +23,7 @@
   --color-gray-border:    #dddddd;
   --color-gray-surface:   #d2d2d2;  /* cassette-gray bg */
   --color-tape-bg:        #E2DDD7;  /* warm linen — track input area bg */
+  --color-page-bg:        #F7F3EF;  /* warm off-white — all page backgrounds */
 
   /* Font families */
   --font-sans:        'Inter', 'Helvetica Neue', Arial, sans-serif;
@@ -85,7 +86,7 @@ html {
 }
 
 body {
-  background: var(--color-white);
+  background: var(--color-page-bg);
   color: var(--color-black);
   font-size: var(--text-base);
   line-height: var(--leading-normal);

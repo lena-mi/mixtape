@@ -43,7 +43,7 @@
   .metallic-btn {
     position: relative;
     height: 48px;
-    min-width: 48px;
+    width: 84px;
     border: none;
     background: none;
     padding: 0;
@@ -115,13 +115,8 @@
   }
 
   /* ── Disabled ── */
-  .metallic-btn:disabled { cursor: not-allowed; }
-  .metallic-btn:disabled .m-label { opacity: 0.5; }
-  .metallic-btn:disabled .m-inner { opacity: 0; }
-  .metallic-btn:disabled .m-face {
-    background: linear-gradient(180deg, #393B3A 0%, #656362 2.4%, #E3E2E0 47.6%, #9BA0A1 75.96%, #9CA19E 100%);
-    box-shadow: none;
-  }
+  .metallic-btn:disabled { cursor: default; }
+  .metallic-btn:disabled .m-label { opacity: 0.25; }
 
   /* ══ Per-button corner radii ══ */
 

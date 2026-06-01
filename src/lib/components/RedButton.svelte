@@ -9,6 +9,8 @@
     isPlaying?: boolean
   } = $props()
 
+  import playSvg from '$lib/assets/icons/play.svg?raw'
+
   let pressed = $state(false)
 
   function down() { if (!disabled) pressed = true }
@@ -30,9 +32,7 @@
   <span class="m-height" aria-hidden="true"></span>
   <span class="m-face" aria-hidden="true">
     <span class="m-inner" aria-hidden="true"></span>
-    <svg class="m-icon" viewBox="0 0 9 11" fill="none" aria-hidden="true">
-      <path d="M0 0L9 5.5L0 11Z" fill="#FFEAE3" />
-    </svg>
+    <span class="m-icon" aria-hidden="true">{@html playSvg}</span>
   </span>
 </button>
 
@@ -90,10 +90,11 @@
   /* ── Play icon ── */
   .m-icon {
     position: absolute;
-    left: 44%;
-    right: 38.86%;
-    top: 35.7%;
-    bottom: 37.5%;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
   }
 
   /* ── Press ── */

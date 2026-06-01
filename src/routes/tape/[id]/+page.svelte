@@ -352,6 +352,7 @@
     height: auto;
     display: block;
     filter: drop-shadow(10px 14px 14px rgba(73, 68, 61, 0.3));
+    filter: drop-shadow(4px 8px 6px rgba(39, 38, 46, 0.25));
     
   }
 

@@ -1,6 +1,9 @@
 <script lang="ts">
   import RedButton from './RedButton.svelte'
   import MetallicButton from './MetallicButton.svelte'
+  import rewindSvg from '$lib/assets/icons/rewind.svg?raw'
+  import forwardSvg from '$lib/assets/icons/forward.svg?raw'
+  import pauseSvg from '$lib/assets/icons/pause.svg?raw'
 
   let {
     onplay,
@@ -33,9 +36,9 @@
   <div class="play-wrap">
     <RedButton onclick={onplay} disabled={!isLoaded} {isPlaying} />
   </div>
-  <MetallicButton class="prev-btn" onclick={onprev} disabled={!canPrev} aria-label="Previous">⏮</MetallicButton>
-  <MetallicButton class="stop-btn" onclick={onstop} disabled={!isPlaying} aria-label="Pause">⏸</MetallicButton>
-  <MetallicButton class="next-btn" onclick={onnext} disabled={!canNext} aria-label="Next">⏭</MetallicButton>
+  <MetallicButton class="prev-btn" onclick={onprev} disabled={!canPrev} aria-label="Previous">{@html rewindSvg}</MetallicButton>
+  <MetallicButton class="stop-btn" onclick={onstop} disabled={!isPlaying} aria-label="Pause">{@html pauseSvg}</MetallicButton>
+  <MetallicButton class="next-btn" onclick={onnext} disabled={!canNext} aria-label="Next">{@html forwardSvg}</MetallicButton>
   <MetallicButton class="switch-btn" onclick={onswitchside} disabled={!hasSideB} aria-label="Switch side">
     {currentSide === 'A' ? 'SIDE B' : 'SIDE A'}
   </MetallicButton>
