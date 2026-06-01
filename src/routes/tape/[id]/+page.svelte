@@ -6,6 +6,7 @@
 
   let { data }: { data: PageData } = $props()
 
+  let intro = $state(true)
   let currentTrackIndex = $state(0)
   let isPlaying = $state(false)
   let isLoaded = $state(false)
@@ -157,7 +158,22 @@
   ></audio>
 </div>
 
-<main class="tape-page">
+{#if intro}
+  <div class="intro-screen">
+    <div class="intro-content">
+      <p class="intro-label">you've received a mixtape</p>
+      <h1 class="intro-title">{data.tape.title}</h1>
+      {#if data.tape.dedication}
+        <p class="intro-dedication">{data.tape.dedication}</p>
+      {/if}
+      <button class="btn-put-on" onclick={() => intro = false}>
+        Put on the tape →
+      </button>
+    </div>
+  </div>
+{/if}
+
+<main class="tape-page" class:hidden={intro}>
   <header class="tape-header">
     <h1 class="tape-title">{data.tape.title}</h1>
     {#if data.tape.dedication}
@@ -221,9 +237,81 @@
 </main>
 
 <style>
+  /* Intro */
+
+  .intro-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-white, #fff);
+    z-index: 10;
+    animation: fade-in 0.4s ease;
+  }
+
+  .intro-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    text-align: center;
+    padding: var(--space-6);
+  }
+
+  .intro-label {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-xs);
+    text-transform: uppercase;
+    color: var(--color-gray-muted);
+    margin: 0;
+  }
+
+  .intro-title {
+    font-size: var(--text-4xl);
+    font-weight: 700;
+    letter-spacing: var(--tracking-4xl);
+    line-height: var(--leading-tight);
+    margin: 0;
+  }
+
+  .intro-dedication {
+    font-size: var(--text-lg);
+    letter-spacing: var(--tracking-lg);
+    font-style: italic;
+    color: var(--color-gray-secondary);
+    margin: 0;
+  }
+
+  .btn-put-on {
+    margin-top: var(--space-4);
+    padding: var(--space-3) var(--space-6);
+    background: var(--color-black, #000);
+    color: var(--color-white, #fff);
+    border: none;
+    font-family: inherit;
+    font-size: var(--text-base);
+    letter-spacing: var(--tracking-base);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: opacity 0.15s;
+  }
+
+  .btn-put-on:hover { opacity: 0.75; }
+
   .tape-page {
     min-height: 100vh;
     padding: var(--space-6);
+    animation: fade-in 0.5s ease;
+  }
+
+  .tape-page.hidden {
+    display: none;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   .tape-header {
