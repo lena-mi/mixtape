@@ -356,6 +356,7 @@
 
   <footer class="page-footer">
     <form method="POST" action="?/share">
+      <input type="hidden" name="tape_id" value={data.tape.id} />
       <button type="submit" class="btn btn-primary">Share this tape →</button>
     </form>
   </footer>
