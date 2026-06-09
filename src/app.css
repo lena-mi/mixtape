@@ -65,6 +65,9 @@
   --radius-sm: 2px;
   --radius-md: 4px;
   --radius-lg: 8px;
+
+  /* Layout */
+  --header-h: 43px;
 }
 
 /* ─────────────────────────────────────────
