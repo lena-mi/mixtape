@@ -83,7 +83,7 @@ export const actions: Actions = {
       .eq('tape_id', tapeId)
       .eq('side', side)
 
-    const { error: insertError } = await supabaseAdmin
+    const { data: inserted, error: insertError } = await supabaseAdmin
       .from('tracks')
       .insert({
         tape_id: tapeId,
@@ -95,13 +95,15 @@ export const actions: Actions = {
         side,
         position: count ?? 0,
       })
+      .select('id')
+      .single()
 
     if (insertError) {
       console.error('[addTrack] insert failed:', insertError.message)
       return fail(500, { error: insertError.message })
     }
 
-    return { success: true }
+    return { success: true, id: inserted!.id }
   },
 
   deleteTrack: async ({ request }) => {

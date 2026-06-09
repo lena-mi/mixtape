@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { PageData } from './$types'
   import { untrack } from 'svelte'
-  import { invalidateAll } from '$app/navigation'
+  import { deserialize } from '$app/forms'
   import TrackInput from '$lib/components/TrackInput.svelte'
   import type { CommitHint } from '$lib/utils/audioUrl'
   import { extractVideoId, formatDuration } from '$lib/utils/audioUrl'
@@ -217,18 +217,20 @@
     formData.append('side', side)
 
     const response = await fetch('?/addTrack', { method: 'POST', body: formData })
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}))
-      throw new Error(body.error ?? 'Failed to save track')
+    const result = deserialize(await response.text())
+
+    if (result.type === 'failure' || result.type === 'error') {
+      const msg = result.type === 'failure'
+        ? ((result.data as any)?.error ?? 'Failed to save track')
+        : (result.error?.message ?? 'Failed to save track')
+      throw new Error(msg)
     }
 
     const slot = slots.find(s => s.key === slotKey)
-    if (slot) slot.savedDuration = Math.round(duration)
-
-    await invalidateAll()
-
-    const saved = [...data.tracks].reverse().find(t => t.storage_path === storagePath && t.side === side)
-    if (slot && saved) slot.trackId = saved.id
+    if (slot) {
+      slot.savedDuration = Math.round(duration)
+      if (result.type === 'success') slot.trackId = (result.data as any)?.id
+    }
 
     return { title }
   }
