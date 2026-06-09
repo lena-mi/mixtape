@@ -2,17 +2,13 @@
   import type { PageData } from './$types'
   import cassette from '$lib/assets/Casette-empty.png'
   import { onMount } from 'svelte'
+  import { fly } from 'svelte/transition'
+  import { cubicIn } from 'svelte/easing'
   import PlayerControls from '$lib/components/PlayerControls.svelte'
 
   let { data }: { data: PageData } = $props()
 
   let intro = $state(true)
-  let introLeaving = $state(false)
-
-  function dismissIntro() {
-    introLeaving = true
-    setTimeout(() => { intro = false }, 380)
-  }
   let currentTrackIndex = $state(0)
   let isPlaying = $state(false)
   let isLoaded = $state(false)
@@ -172,7 +168,7 @@
 </div>
 
 {#if intro}
-  <div class="intro-screen" class:leaving={introLeaving}>
+  <div class="intro-screen" out:fly={{ y: -60, duration: 380, easing: cubicIn }}>
     <p class="intro-heading">You've received the tape!</p>
 
     <div class="intro-cassette-wrap">
@@ -194,7 +190,7 @@
       </div>
     </div>
 
-    <button class="btn-put-on" onclick={dismissIntro}>
+    <button class="btn-put-on" onclick={() => intro = false}>
       Put on the tape →
     </button>
   </div>
@@ -279,18 +275,9 @@
     animation: intro-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  .intro-screen.leaving {
-    animation: intro-leave 0.38s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
   @keyframes intro-enter {
     from { opacity: 0; transform: translateY(32px); }
     to   { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes intro-leave {
-    from { opacity: 1; transform: translateY(0); }
-    to   { opacity: 0; transform: translateY(-48px); }
   }
 
   .intro-heading {
