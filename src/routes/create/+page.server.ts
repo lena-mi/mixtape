@@ -20,6 +20,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
       maxAge: 60 * 60 * 24,
       httpOnly: true,
       sameSite: 'lax',
+      secure: true,
     })
   }
 
@@ -118,8 +119,9 @@ export const actions: Actions = {
     await supabaseAdmin.from('tapes').update({ cover_url: coverUrl, cover_position: coverPosition }).eq('id', tapeId)
   },
 
-  share: async ({ cookies }) => {
-    const tapeId = cookies.get('draft_tape_id')
+  share: async ({ request, cookies }) => {
+    const data = await request.formData()
+    const tapeId = (data.get('tape_id') as string) || cookies.get('draft_tape_id')
     if (!tapeId) return fail(400, { error: 'No active tape' })
 
     const { data: tracks } = await supabaseAdmin
