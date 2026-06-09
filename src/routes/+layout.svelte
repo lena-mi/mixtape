@@ -1,8 +1,10 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
+	import { page } from '$app/stores';
 	import '../app.css';
 
 	let { children } = $props();
+	const isLanding = $derived($page.route.id === '/');
 
 	function scramble(node: HTMLElement) {
 		const original = (node.textContent ?? '').replace(/\s+/g, ' ').trim()
@@ -55,7 +57,7 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<header class="site-header">
+<header class="site-header" class:transparent={isLanding}>
 	<a href="/" class="brand" use:scramble>Flip+Spin</a>
 	<a href="#manifesto" class="nav-link" use:scramble>Manifesto</a>
 	<a href="#tape-of-season" class="nav-link" use:scramble>Tape of the Season</a>
@@ -79,6 +81,14 @@
 		gap: 48px;
 		z-index: 1000;
 		background: var(--color-page-bg);
+	}
+
+	.site-header.transparent {
+		background: transparent;
+	}
+
+	.site-header.transparent::after {
+		display: none;
 	}
 
 	.site-header::after {
