@@ -279,7 +279,6 @@
     from { opacity: 0; transform: translateY(32px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-
   .intro-heading {
     font-family: 'Caveat', cursive;
     font-weight: 400;
