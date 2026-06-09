@@ -83,7 +83,7 @@ export const actions: Actions = {
       .eq('tape_id', tapeId)
       .eq('side', side)
 
-    const { error: insertError } = await supabaseAdmin
+    const { data: inserted, error: insertError } = await supabaseAdmin
       .from('tracks')
       .insert({
         tape_id: tapeId,
@@ -95,19 +95,30 @@ export const actions: Actions = {
         side,
         position: count ?? 0,
       })
+      .select('id')
+      .single()
 
     if (insertError) {
       console.error('[addTrack] insert failed:', insertError.message)
       return fail(500, { error: insertError.message })
     }
 
-    return { success: true }
+    return { success: true, id: inserted!.id }
   },
 
   deleteTrack: async ({ request }) => {
     const data = await request.formData()
     const id = data.get('id') as string
+    if (!id) return fail(400, { error: 'Missing id' })
     await supabaseAdmin.from('tracks').delete().eq('id', id)
+  },
+
+  renameTrack: async ({ request }) => {
+    const data = await request.formData()
+    const id = data.get('id') as string
+    const title = data.get('title') as string
+    if (!id || !title) return fail(400, { error: 'Missing id or title' })
+    await supabaseAdmin.from('tracks').update({ title }).eq('id', id)
   },
 
   updateCover: async ({ request, cookies }) => {
