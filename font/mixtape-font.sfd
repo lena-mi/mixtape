@@ -1,0 +1,72 @@
+SplineFontDB: 3.2
+FontName: Untitled1
+FullName: Untitled1
+FamilyName: Untitled1
+Weight: Regular
+Copyright: Copyright (c) 2026, Olena Mizrakh
+UComments: "2026-6-9: Created with FontForge (http://fontforge.org)"
+Version: 001.000
+ItalicAngle: 0
+UnderlinePosition: -100
+UnderlineWidth: 50
+Ascent: 800
+Descent: 200
+InvalidEm: 0
+LayerCount: 2
+Layer: 0 0 "Back" 1
+Layer: 1 0 "Fore" 0
+XUID: [1021 14 -1234088929 15556689]
+OS2Version: 0
+OS2_WeightWidthSlopeOnly: 0
+OS2_UseTypoMetrics: 1
+CreationTime: 1781016207
+ModificationTime: 1781016278
+OS2TypoAscent: 0
+OS2TypoAOffset: 1
+OS2TypoDescent: 0
+OS2TypoDOffset: 1
+OS2TypoLinegap: 0
+OS2WinAscent: 0
+OS2WinAOffset: 1
+OS2WinDescent: 0
+OS2WinDOffset: 1
+HheadAscent: 0
+HheadAOffset: 1
+HheadDescent: 0
+HheadDOffset: 1
+OS2Vendor: 'PfEd'
+DEI: 91125
+Encoding: ISO8859-1
+UnicodeInterp: none
+NameList: AGL For New Fonts
+DisplaySize: -48
+AntiAlias: 1
+FitToEm: 0
+WinInfo: 192 16 4
+BeginChars: 256 1
+
+StartChar: Atilde
+Encoding: 195 195 0
+Width: 1000
+Flags: HO
+LayerCount: 2
+Fore
+SplineSet
+55 297 m 0
+ 165.764929357 424.811090184 292.196537568 567.167015831 295 747 c 0
+ 290.663638928 752.001721117 280.887795108 758.734028478 274 759 c 4
+ 214.713939501 692.417918573 235.738252388 566.411885651 241 477 c 0
+ 245.744405534 413.130874072 247.472688633 349.173865233 247 285 c 0
+ 232.97759947 220.048651546 236.882370744 119.382642968 163 93 c 0
+ 133.661645454 94.6828331147 133.634983959 137.608272748 136 159 c 0
+ 108.70363522 446.23943664 494.979245052 514.808941451 544 753 c 0
+ 545.035206579 765.549916045 528.664375139 768.207488114 520 768 c 0
+ 431.03627891 666.013276156 446.120139387 503.948919462 439 375 c 0
+ 427.554352227 302.025372308 454.420484638 179.700871719 388 138 c 0
+ 347.359776538 150.360171551 342.883914862 220.902199493 349 255 c 0
+ 405.08532549 432.833341676 565.135574434 546.103651809 703 660 c 0
+ 763 687 l 1025
+EndSplineSet
+EndChar
+EndChars
+EndSplineFont

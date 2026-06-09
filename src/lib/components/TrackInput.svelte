@@ -7,11 +7,13 @@
   let {
     index,
     oncommit,
+    onrename,
     initialState = 'idle',
     initialTitle = '',
   }: {
     index: number
     oncommit?: (url: string, hint?: CommitHint) => Promise<{ title: string }>
+    onrename?: (newTitle: string) => Promise<void>
     initialState?: TrackState
     initialTitle?: string
   } = $props()
@@ -159,6 +161,7 @@
     if (!renameValue.trim()) return
     title = renameValue.trim()
     trackState = 'filled'
+    onrename?.(title)
   }
 
   function handleRenameKeydown(e: KeyboardEvent) {

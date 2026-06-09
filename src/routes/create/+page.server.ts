@@ -109,7 +109,16 @@ export const actions: Actions = {
   deleteTrack: async ({ request }) => {
     const data = await request.formData()
     const id = data.get('id') as string
+    if (!id) return fail(400, { error: 'Missing id' })
     await supabaseAdmin.from('tracks').delete().eq('id', id)
+  },
+
+  renameTrack: async ({ request }) => {
+    const data = await request.formData()
+    const id = data.get('id') as string
+    const title = data.get('title') as string
+    if (!id || !title) return fail(400, { error: 'Missing id or title' })
+    await supabaseAdmin.from('tracks').update({ title }).eq('id', id)
   },
 
   updateCover: async ({ request, cookies }) => {

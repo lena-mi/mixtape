@@ -247,6 +247,16 @@
     if (idx !== -1) slots.splice(idx, 1)
   }
 
+  async function handleRename(slotKey: number, side: Side, newTitle: string) {
+    const slots = side === 'a' ? slotsA : slotsB
+    const slot = slots.find(s => s.key === slotKey)
+    if (!slot?.trackId) return
+    const formData = new FormData()
+    formData.append('id', slot.trackId)
+    formData.append('title', newTitle)
+    await fetch('?/renameTrack', { method: 'POST', body: formData })
+  }
+
   function addSlot(side: Side) {
     const slots = side === 'a' ? slotsA : slotsB
     slots.push({ key: keySeq++ })
@@ -338,6 +348,7 @@
                     initialState={slot.savedTitle ? 'filled' : 'idle'}
                     initialTitle={slot.savedTitle ?? ''}
                     oncommit={(url, hint) => handleCommit(slot.key, url, side, hint)}
+                    onrename={(newTitle) => handleRename(slot.key, side, newTitle)}
                   />
                 </div>
                 {#if !slot.locked}
