@@ -1,10 +1,10 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import '../app.css';
 
 	let { children } = $props();
-	const isLanding = $derived($page.route.id === '/');
+	const isLanding = $derived(page.route.id === '/');
 
 	function scramble(node: HTMLElement) {
 		const original = (node.textContent ?? '').replace(/\s+/g, ' ').trim()

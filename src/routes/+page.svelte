@@ -16,7 +16,8 @@
   .landing {
     position: relative;
     width: 100%;
-    height: calc(100vh - var(--header-h));
+    height: 100vh;
+    margin-top: calc(-1 * var(--header-h));
     background: #EDEBE3;
     overflow: hidden;
   }
