@@ -81,7 +81,15 @@
 
   function prev() {
     const prevIdx = currentTrackIndex - 1
-    if (prevIdx >= sideStart()) goToTrack(prevIdx)
+    if (prevIdx >= sideStart()) {
+      goToTrack(prevIdx)
+    } else {
+      if (isAudioTrack) {
+        if (audioEl) audioEl.currentTime = 0
+      } else {
+        player?.seekTo(0, true)
+      }
+    }
   }
 
   function switchSide() {
@@ -203,7 +211,7 @@
       onswitchside={switchSide}
       {isPlaying}
       {isLoaded}
-      canPrev={currentTrackIndex > (currentSide === 'A' ? 0 : midpoint)}
+      canPrev={true}
       canNext={currentTrackIndex < (currentSide === 'A' ? midpoint - 1 : allTracks.length - 1)}
       hasSideB={tracksB.length > 0}
       {currentSide}
@@ -215,20 +223,20 @@
       <div class="side-tracks">
         <p class="side-label">Side A</p>
         {#each tracksA as track, i}
-          <button class="track-item" class:active={i === currentTrackIndex} onclick={() => goToTrack(i)}>
+          <div class="track-item" class:active={i === currentTrackIndex}>
             <span class="track-number">{i + 1}.</span>
             <span class="track-title">{track.title}</span>
-          </button>
+          </div>
         {/each}
       </div>
     {:else}
       <div class="side-tracks">
         <p class="side-label">Side B</p>
         {#each tracksB as track, i}
-          <button class="track-item" class:active={midpoint + i === currentTrackIndex} onclick={() => goToTrack(midpoint + i)}>
+          <div class="track-item" class:active={midpoint + i === currentTrackIndex}>
             <span class="track-number">{i + 1}.</span>
             <span class="track-title">{track.title}</span>
-          </button>
+          </div>
         {/each}
       </div>
     {/if}
@@ -314,23 +322,38 @@
   }
 
   .tape-header {
-    text-align: center;
-    margin-bottom: var(--space-8);
+    position: relative;
+    height: 40px;
+    margin-bottom: 7px;
   }
 
   .tape-title {
-    font-size: var(--text-4xl);
+    position: absolute;
+    width: 185px;
+    left: calc(50% - 185px / 2 + 0.5px);
+    top: 0;
+    font-family: 'Inter', sans-serif;
     font-weight: 700;
-    letter-spacing: var(--tracking-4xl);
-    line-height: var(--leading-tight);
-    margin-bottom: var(--space-2);
+    font-size: 16px;
+    line-height: 19px;
+    text-align: center;
+    color: #000000;
+    margin: 0;
   }
 
   .tape-dedication {
-    font-size: var(--text-lg);
-    letter-spacing: var(--tracking-lg);
-    font-style: italic;
-    color: var(--color-gray-secondary);
+    position: absolute;
+    width: 242px;
+    left: calc(50% - 242px / 2);
+    top: 21px;
+    font-family: 'Chivo Mono', monospace;
+    font-weight: 400;
+    font-size: 13px;
+    line-height: 15px;
+    text-align: center;
+    color: #000000;
+    font-style: normal;
+    margin: 0;
   }
 
   .cassette-container {
@@ -406,17 +429,7 @@
     align-items: center;
     gap: var(--space-2);
     width: 100%;
-    background: none;
-    border: none;
-    font-family: inherit;
-    text-align: left;
-    cursor: pointer;
     border-radius: var(--radius-md);
-    transition: background 0.1s;
-  }
-
-  .track-item:hover {
-    background: #f5f5f5;
   }
 
   .track-item.active .track-title {
