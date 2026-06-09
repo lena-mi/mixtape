@@ -7,6 +7,12 @@
   let { data }: { data: PageData } = $props()
 
   let intro = $state(true)
+  let introLeaving = $state(false)
+
+  function dismissIntro() {
+    introLeaving = true
+    setTimeout(() => { intro = false }, 380)
+  }
   let currentTrackIndex = $state(0)
   let isPlaying = $state(false)
   let isLoaded = $state(false)
@@ -166,17 +172,31 @@
 </div>
 
 {#if intro}
-  <div class="intro-screen">
-    <div class="intro-content">
-      <p class="intro-label">you've received a mixtape</p>
-      <h1 class="intro-title">{data.tape.title}</h1>
-      {#if data.tape.dedication}
-        <p class="intro-dedication">{data.tape.dedication}</p>
+  <div class="intro-screen" class:leaving={introLeaving}>
+    <p class="intro-heading">You've received the tape!</p>
+
+    <div class="intro-cassette-wrap">
+      <img src={cassette} alt="Cassette tape" class="intro-cassette-img" />
+      {#if data.tape.cover_url}
+        <img
+          src={data.tape.cover_url}
+          alt="Cover"
+          class="intro-cover-img"
+          style="object-position: {(data.tape as any).cover_position ?? '50% 50%'}"
+          draggable="false"
+        />
       {/if}
-      <button class="btn-put-on" onclick={() => intro = false}>
-        Put on the tape →
-      </button>
+      <div class="intro-label-card">
+        <span class="intro-label-title">{data.tape.title}</span>
+        {#if data.tape.dedication}
+          <span class="intro-label-desc">{data.tape.dedication}</span>
+        {/if}
+      </div>
     </div>
+
+    <button class="btn-put-on" onclick={dismissIntro}>
+      Put on the tape →
+    </button>
   </div>
 {/if}
 
@@ -250,48 +270,107 @@
     position: fixed;
     inset: 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--color-white, #fff);
-    z-index: 10;
-    animation: fade-in 0.4s ease;
+    gap: 20px;
+    background: #F7F3EF;
+    z-index: 1001;
+    animation: intro-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  .intro-content {
+  .intro-screen.leaving {
+    animation: intro-leave 0.38s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes intro-enter {
+    from { opacity: 0; transform: translateY(32px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes intro-leave {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-48px); }
+  }
+
+  .intro-heading {
+    font-family: 'Caveat', cursive;
+    font-weight: 400;
+    font-size: 50px;
+    line-height: 63px;
+    letter-spacing: -1px;
+    color: #000000;
+    margin: 0;
+  }
+
+  .intro-cassette-wrap {
+    position: relative;
+    width: 439px;
+    height: 282px;
+    flex-shrink: 0;
+  }
+
+  .intro-cassette-img {
+    width: 439px;
+    height: 282px;
+    display: block;
+  }
+
+  .intro-cover-img {
+    position: absolute;
+    left: 16px;
+    top: 15px;
+    width: 411px;
+    height: 250px;
+    object-fit: cover;
+    mix-blend-mode: multiply;
+    border-radius: 1px;
+  }
+
+  .intro-label-card {
+    position: absolute;
+    left: calc(50% - 131px);
+    top: calc(50% - 23px);
+    width: 262px;
+    height: 46px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-3);
-    text-align: center;
-    padding: var(--space-6);
+    justify-content: center;
+    padding: 5px 10px;
+    gap: 2px;
+    background: #F7F3EF;
+    box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
   }
 
-  .intro-label {
-    font-size: var(--text-xs);
-    letter-spacing: var(--tracking-xs);
-    text-transform: uppercase;
-    color: var(--color-gray-muted);
-    margin: 0;
-  }
-
-  .intro-title {
-    font-size: var(--text-4xl);
+  .intro-label-title {
+    font-family: 'Inter', sans-serif;
     font-weight: 700;
-    letter-spacing: var(--tracking-4xl);
-    line-height: var(--leading-tight);
-    margin: 0;
+    font-size: 16px;
+    line-height: 19px;
+    text-align: center;
+    color: #000000;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .intro-dedication {
-    font-size: var(--text-lg);
-    letter-spacing: var(--tracking-lg);
-    font-style: italic;
-    color: var(--color-gray-secondary);
-    margin: 0;
+  .intro-label-desc {
+    font-family: 'Chivo Mono', monospace;
+    font-weight: 400;
+    font-size: 13px;
+    line-height: 15px;
+    text-align: center;
+    color: #000000;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .btn-put-on {
-    margin-top: var(--space-4);
     padding: var(--space-3) var(--space-6);
     background: var(--color-black, #000);
     color: var(--color-white, #fff);
@@ -317,7 +396,7 @@
   }
 
   @keyframes fade-in {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(48px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
