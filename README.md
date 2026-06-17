@@ -1,4 +1,4 @@
-# 📼 Mixtape
+# 📼 Flip + Spin
 
 A tool for making real mixtapes — the kind with a beginning, an end, a recipient, and an expiry date. No algorithm, no account, no monthly fee.
 
