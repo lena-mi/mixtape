@@ -11,6 +11,7 @@
     const self = i === 0 ? vid0 : vid1
     const other = i === 0 ? vid1 : vid0
     if (!self || !other || crossfading || i !== active) return
+    if (isNaN(self.duration)) return
     if (self.duration - self.currentTime <= FADE) {
       crossfading = true
       other.currentTime = 0
@@ -40,6 +41,8 @@
   </div>
 
   <p class="tagline">Where has sincere listening gone? <br> Make someone a tape and share it peer-to-peer.</p>
+
+  <a href="/create" class="btn-create">Create tape</a>
 
   <div class="kofi" aria-label="Support on Ko-fi"></div>
 </div>
@@ -110,6 +113,27 @@
     color: #000000;
     letter-spacing: -0.03em;
     /*text-transform: uppercase;*/
+  }
+
+  .btn-create {
+    position: absolute;
+    left: calc(50% - 350px);
+    top: 484px;
+    display: inline-block;
+    padding: 14px 32px;
+    background: #000;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 16px;
+    letter-spacing: -0.03em;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: opacity 0.15s;
+  }
+
+  .btn-create:hover {
+    opacity: 0.75;
   }
 
   .kofi {
