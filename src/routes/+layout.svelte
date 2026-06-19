@@ -2,9 +2,11 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
 	import '../app.css';
+	import ManifestoDialog from '$lib/components/ManifestoDialog.svelte';
 
 	let { children } = $props();
 	const isLanding = $derived(page.route.id === '/');
+	let manifestoOpen = $state(false);
 
 	function scramble(node: HTMLElement) {
 		const original = (node.textContent ?? '').replace(/\s+/g, ' ').trim()
@@ -59,10 +61,12 @@
 
 <header class="site-header" class:transparent={isLanding}>
 	<a href="/" class="brand" use:scramble>Flip+Spin</a>
-	<a href="#manifesto" class="nav-link" use:scramble>Manifesto</a>
+	<button class="nav-link" onclick={() => (manifestoOpen = true)} use:scramble>Manifesto</button>
 	<a href="#tape-of-season" class="nav-link" use:scramble>Tape of the Season</a>
 	<a href="/create" class="nav-link nav-new" use:scramble>New Mixtape</a>
 </header>
+
+<ManifestoDialog bind:open={manifestoOpen} />
 
 <div class="layout-body">
 	{@render children()}
@@ -126,6 +130,10 @@
 		text-decoration: none;
 		white-space: nowrap;
 		overflow: hidden;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
 	}
 
 	.nav-new {
