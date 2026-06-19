@@ -1,13 +1,45 @@
+<script lang="ts">
+  import introVideo from '$lib/assets/intro-video.mov'
+
+  let vid0: HTMLVideoElement
+  let vid1: HTMLVideoElement
+  let active = $state(0)
+  let crossfading = false
+  const FADE = 0.8 // seconds — crossfade duration
+
+  function onTimeUpdate(i: number) {
+    const self = i === 0 ? vid0 : vid1
+    const other = i === 0 ? vid1 : vid0
+    if (!self || !other || crossfading || i !== active) return
+    if (self.duration - self.currentTime <= FADE) {
+      crossfading = true
+      other.currentTime = 0
+      other.play().catch(() => {})
+      active = 1 - i
+      setTimeout(() => { crossfading = false }, FADE * 1000 + 100)
+    }
+  }
+</script>
+
 <svelte:head>
   <title>Flip+Spin — Make someone a tape</title>
 </svelte:head>
 
 <div class="landing">
   <div class="video-container">
-    <div class="video-frame"></div>
+    <div class="video-frame">
+      <!-- svelte-ignore a11y_media_has_caption -->
+      <video bind:this={vid0} src={introVideo} autoplay muted playsinline
+        class="video-bg" style="opacity: {active === 0 ? 1 : 0}"
+        ontimeupdate={() => onTimeUpdate(0)}></video>
+      <!-- svelte-ignore a11y_media_has_caption -->
+      <video bind:this={vid1} src={introVideo} muted playsinline
+        class="video-bg" style="opacity: {active === 1 ? 1 : 0}"
+        ontimeupdate={() => onTimeUpdate(1)}></video>
+    </div>
   </div>
 
-  <p class="tagline">Where has sincere listening gone? Make someone a tape and share it peer-to-peer.</p>
+  <p class="tagline">Where has sincere listening gone? <br> Make someone a tape and share it peer-to-peer.</p>
 
   <div class="kofi" aria-label="Support on Ko-fi"></div>
 </div>
@@ -52,18 +84,32 @@
     background: #c0bbb2;
     border: 1px solid #ffffff;
     border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .video-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    
+    transition: opacity 0.8s ease;
   }
 
   .tagline {
     position: absolute;
-    width: 469px;
-    left: calc(50% - 234.5px);
+    width: 700px;
+    left: calc(50% - 350px);
     top: 304px;
     font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-size: 20px;
-    line-height: 24px;
+    font-weight: 500;
+    font-size: 40px;
+    line-height: 48px;
     color: #000000;
+    letter-spacing: -0.03em;
+    /*text-transform: uppercase;*/
   }
 
   .kofi {
