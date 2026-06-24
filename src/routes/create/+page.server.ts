@@ -121,6 +121,14 @@ export const actions: Actions = {
     await supabaseAdmin.from('tracks').update({ title }).eq('id', id)
   },
 
+  reorderTrack: async ({ request }) => {
+    const data = await request.formData()
+    const id = data.get('id') as string
+    const position = parseInt(data.get('position') as string)
+    if (!id || isNaN(position)) return fail(400, { error: 'Missing fields' })
+    await supabaseAdmin.from('tracks').update({ position }).eq('id', id)
+  },
+
   updateCover: async ({ request, cookies }) => {
     const data = await request.formData()
     const tapeId = (data.get('tape_id') as string) || cookies.get('draft_tape_id')
