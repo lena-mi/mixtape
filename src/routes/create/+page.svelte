@@ -62,7 +62,7 @@
     trackId?: string
     savedTitle?: string
     savedDuration?: number
-    locked?: boolean
+    savedUrl?: string
   }
 
   let tapeTitle = $state(untrack(() => data.tape.title ?? ''))
@@ -79,13 +79,13 @@
   let keySeq = 1
 
   function makeSlots(tracks: typeof data.tracks): Slot[] {
-    if (tracks.length === 0) return [{ key: keySeq++, locked: true }]
-    return tracks.map((t, i) => ({
+    if (tracks.length === 0) return [{ key: keySeq++ }]
+    return tracks.map((t) => ({
       key: keySeq++,
       trackId: t.id,
       savedTitle: t.title,
       savedDuration: (t as any).duration_seconds ?? 0,
-      locked: i === 0,
+      savedUrl: (t as any).source_url ?? '',
     }))
   }
 
@@ -229,6 +229,7 @@
     const slot = slots.find(s => s.key === slotKey)
     if (slot) {
       slot.savedDuration = Math.round(duration)
+      slot.savedUrl = sourceUrl
       if (result.type === 'success') slot.trackId = (result.data as any)?.id
     }
 
@@ -244,7 +245,12 @@
       await fetch('?/deleteTrack', { method: 'POST', body: formData })
     }
     const idx = slots.findIndex(s => s.key === slotKey)
-    if (idx !== -1) slots.splice(idx, 1)
+    if (idx === -1) return
+    if (slots.length === 1) {
+      slots[idx] = { key: keySeq++ }
+    } else {
+      slots.splice(idx, 1)
+    }
   }
 
   async function handleRename(slotKey: number, side: Side, newTitle: string) {
@@ -261,7 +267,80 @@
     const slots = side === 'a' ? slotsA : slotsB
     slots.push({ key: keySeq++ })
   }
+
+  // ── Drag-to-reorder ──────────────────────────────────────────────────────
+
+  let dragging = $state(false)
+  let dragKey = $state<number | null>(null)
+  let dragSide = $state<Side | null>(null)
+  let dropIndex = $state<number | null>(null)
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null
+
+  function onHandlePointerDown(e: PointerEvent, slotKey: number, side: Side) {
+    e.preventDefault()
+    const activate = () => {
+      dragging = true
+      dragKey = slotKey
+      dragSide = side
+      document.documentElement.style.overflow = 'hidden'
+      document.documentElement.style.touchAction = 'none'
+    }
+    if (e.pointerType === 'touch') {
+      longPressTimer = setTimeout(activate, 300)
+    } else {
+      activate()
+    }
+  }
+
+  function onDocPointerMove(e: PointerEvent) {
+    if (!dragging || dragSide === null) return
+    const container = document.querySelector<HTMLElement>(`[data-side-container="${dragSide}"]`)
+    if (!container) return
+    const rows = Array.from(container.querySelectorAll<HTMLElement>('.slot-row'))
+    let idx = rows.length
+    for (let i = 0; i < rows.length; i++) {
+      const rect = rows[i].getBoundingClientRect()
+      if (e.clientY < rect.top + rect.height / 2) { idx = i; break }
+    }
+    dropIndex = idx
+  }
+
+  function onDocPointerUp() {
+    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null }
+    if (dragging && dragKey !== null && dragSide !== null && dropIndex !== null) {
+      doReorder(dragSide, dragKey, dropIndex)
+    }
+    dragging = false
+    dragKey = null
+    dragSide = null
+    dropIndex = null
+    document.documentElement.style.overflow = ''
+    document.documentElement.style.touchAction = ''
+  }
+
+  async function doReorder(side: Side, fromKey: number, toIndex: number) {
+    const slots = side === 'a' ? slotsA : slotsB
+    const from = slots.findIndex(s => s.key === fromKey)
+    if (from === -1 || from === toIndex || from === toIndex - 1) return
+    const [moved] = slots.splice(from, 1)
+    slots.splice(from < toIndex ? toIndex - 1 : toIndex, 0, moved)
+    await Promise.all(
+      slots
+        .filter(s => s.trackId)
+        .map((s, i) => {
+          const fd = new FormData()
+          fd.append('id', s.trackId!)
+          fd.append('position', String(i))
+          return fetch('?/reorderTrack', { method: 'POST', body: fd })
+        })
+    )
+  }
 </script>
+
+<svelte:document
+  onpointermove={onDocPointerMove}
+  onpointerup={onDocPointerUp}
+/>
 
 <main class="page">
   <header class="page-header">
@@ -339,27 +418,41 @@
           </span>
         </div>
         <div class="side-content">
-          <div class="slots-container">
-            {#each slots as slot (slot.key)}
-              <div class="slot-row">
+          <div class="slots-container" data-side-container={side}>
+            {#each slots as slot, i (slot.key)}
+              {#if dragging && dragSide === side}
+                <div class="drop-zone" class:active={dropIndex === i}></div>
+              {/if}
+              <div class="slot-row" class:is-dragging={dragKey === slot.key}>
+                {#if slot.trackId}
+                  <button
+                    class="drag-handle"
+                    aria-label="Drag to reorder"
+                    onpointerdown={(e) => onHandlePointerDown(e, slot.key, side)}
+                  ><svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" aria-hidden="true"><circle cx="1.5" cy="1.5" r="1.2"/><circle cx="6.5" cy="1.5" r="1.2"/><circle cx="1.5" cy="6" r="1.2"/><circle cx="6.5" cy="6" r="1.2"/><circle cx="1.5" cy="10.5" r="1.2"/><circle cx="6.5" cy="10.5" r="1.2"/></svg></button>
+                {/if}
                 <div class="slot-input">
                   <TrackInput
-                    index={slots.indexOf(slot) + 1}
+                    index={i + 1}
                     initialState={slot.savedTitle ? 'filled' : 'idle'}
                     initialTitle={slot.savedTitle ?? ''}
+                    initialUrl={slot.savedUrl ?? ''}
                     oncommit={(url, hint) => handleCommit(slot.key, url, side, hint)}
                     onrename={(newTitle) => handleRename(slot.key, side, newTitle)}
                   />
                 </div>
-                {#if !slot.locked}
+                {#if slot.trackId || slots.length > 1}
                   <button
                     class="slot-delete"
                     onclick={() => handleDelete(slot.key, side)}
-                    aria-label="Remove track {slots.indexOf(slot) + 1} from Side {side.toUpperCase()}"
+                    aria-label="Remove track {i + 1} from Side {side.toUpperCase()}"
                   >×</button>
                 {/if}
               </div>
             {/each}
+            {#if dragging && dragSide === side}
+              <div class="drop-zone" class:active={dropIndex === slots.length}></div>
+            {/if}
           </div>
           <button class="btn btn-outline add-btn" onclick={() => addSlot(side)}>+ Track</button>
         </div>
@@ -535,6 +628,52 @@
 
   .slot-row {
     position: relative;
+  }
+
+  .slot-row.is-dragging {
+    opacity: 0.35;
+  }
+
+  .drag-handle {
+    position: absolute;
+    left: calc(-1 * (var(--space-3) + 24px));
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    background: none;
+    border: none;
+    cursor: grab;
+    color: var(--color-gray-muted);
+    font-size: 12px;
+    letter-spacing: 2px;
+    padding: 4px 2px;
+    line-height: 1;
+    touch-action: none;
+    user-select: none;
+    transition: color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .drag-handle:hover {
+    color: var(--color-black);
+  }
+
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .drop-zone {
+    height: 2px;
+    margin: 1px 0;
+    border-radius: 1px;
+    background: transparent;
+    transition: background 0.1s;
+  }
+
+  .drop-zone.active {
+    background: var(--color-black);
   }
 
   .slot-input {

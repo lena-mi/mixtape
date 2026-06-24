@@ -10,16 +10,18 @@
     onrename,
     initialState = 'idle',
     initialTitle = '',
+    initialUrl = '',
   }: {
     index: number
     oncommit?: (url: string, hint?: CommitHint) => Promise<{ title: string }>
     onrename?: (newTitle: string) => Promise<void>
     initialState?: TrackState
     initialTitle?: string
+    initialUrl?: string
   } = $props()
 
   let trackState: TrackState = $state(initialState)
-  let url = $state('')
+  let url = $state(initialUrl)
   let title = $state(initialTitle)
   let renameValue = $state('')
   let nameValue = $state('')
@@ -143,7 +145,7 @@
   }
 
   function resetToIdle() {
-    url = ''
+    url = initialUrl
     title = ''
     nameValue = ''
     probedDuration = 0
@@ -372,7 +374,7 @@
     min-width: 0;
   }
 
-  /* ── Filled: Caveat display + action buttons ── */
+  /* ── Filled: track display + action buttons ── */
 
   .filled-text {
     font-family: 'Caveat', cursive;
