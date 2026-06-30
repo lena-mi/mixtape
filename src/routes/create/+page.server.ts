@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '$lib/supabaseAdmin'
-import { fail, redirect } from '@sveltejs/kit'
+import { error, fail, redirect } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 
 export const load: PageServerLoad = async ({ cookies }) => {
@@ -12,10 +12,11 @@ export const load: PageServerLoad = async ({ cookies }) => {
   }
 
   if (!tapeId) {
-    const { data: newTape } = await supabaseAdmin
+    const { data: newTape, error: insertError } = await supabaseAdmin
       .from('tapes').insert({ title: '', dedication: null }).select().single()
-    tapeId = newTape!.id
-    cookies.set('draft_tape_id', tapeId!, {
+    if (insertError || !newTape) throw error(503, 'Could not connect to database. Please try again.')
+    tapeId = newTape.id
+    cookies.set('draft_tape_id', newTape.id, {
       path: '/',
       maxAge: 60 * 60 * 24,
       httpOnly: true,
@@ -24,12 +25,14 @@ export const load: PageServerLoad = async ({ cookies }) => {
     })
   }
 
-  const [{ data: tape }, { data: tracks }] = await Promise.all([
+  const [{ data: tape, error: tapeError }, { data: tracks }] = await Promise.all([
     supabaseAdmin.from('tapes').select('*').eq('id', tapeId).single(),
     supabaseAdmin.from('tracks').select('*').eq('tape_id', tapeId).order('side').order('position'),
   ])
 
-  return { tape: tape!, tracks: tracks ?? [] }
+  if (tapeError || !tape) throw error(503, 'Could not load tape. Please try again.')
+
+  return { tape, tracks: tracks ?? [] }
 }
 
 export const actions: Actions = {
