@@ -1,25 +1,6 @@
 <script lang="ts">
-  import introVideo from '$lib/assets/intro-video.mov'
-
-  let vid0: HTMLVideoElement
-  let vid1: HTMLVideoElement
-  let active = $state(0)
-  let crossfading = false
-  const FADE = 0.8 // seconds — crossfade duration
-
-  function onTimeUpdate(i: number) {
-    const self = i === 0 ? vid0 : vid1
-    const other = i === 0 ? vid1 : vid0
-    if (!self || !other || crossfading || i !== active) return
-    if (isNaN(self.duration)) return
-    if (self.duration - self.currentTime <= FADE) {
-      crossfading = true
-      other.currentTime = 0
-      other.play().catch(() => {})
-      active = 1 - i
-      setTimeout(() => { crossfading = false }, FADE * 1000 + 100)
-    }
-  }
+  import bgLoopVideo from '$lib/assets/bg_loop_web.mp4'
+  import TapeButton from '$lib/components/TapeButton.svelte'
 </script>
 
 <svelte:head>
@@ -30,21 +11,18 @@
   <div class="video-container">
     <div class="video-frame">
       <!-- svelte-ignore a11y_media_has_caption -->
-      <video bind:this={vid0} src={introVideo} autoplay muted playsinline
-        class="video-bg" style="opacity: {active === 0 ? 1 : 0}"
-        ontimeupdate={() => onTimeUpdate(0)}></video>
-      <!-- svelte-ignore a11y_media_has_caption -->
-      <video bind:this={vid1} src={introVideo} muted playsinline
-        class="video-bg" style="opacity: {active === 1 ? 1 : 0}"
-        ontimeupdate={() => onTimeUpdate(1)}></video>
+      <video autoplay muted loop playsinline class="video-bg">
+        <source src={bgLoopVideo} type="video/mp4" />
+      </video>
     </div>
   </div>
 
-  <p class="tagline">Where has sincere listening gone? <br> Make someone a tape and share it peer-to-peer.</p>
+  <div class="video-scrim"></div>
 
-  <a href="/create" class="btn-create">Create tape</a>
-
-  <div class="kofi" aria-label="Support on Ko-fi"></div>
+  <div class="hero-content">
+    <p class="tagline">Where has sincere<br class="mobile-break"> listening gone? <br> Make someone a tape and<br class="mobile-break"> share it peer-to-peer</p>
+    <TapeButton href="/create">Create a tape</TapeButton>
+  </div>
 </div>
 
 <style>
@@ -71,79 +49,65 @@
 
   .video-container {
     position: absolute;
-    inset: 0 0 2px 0;
-    background: #DBD7CD;
-    padding: 40px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+    inset: 0;
   }
 
   .video-frame {
-    box-sizing: border-box;
-    align-self: stretch;
-    flex-grow: 1;
-    background: #c0bbb2;
-    border: 1px solid #ffffff;
-    border-radius: 20px;
+    width: 100%;
+    height: 100%;
     position: relative;
     overflow: hidden;
   }
 
   .video-bg {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    top: 50%;
+    left: 50%;
+    width: 100vh;
+    height: 100vw;
+    transform: translate(-50%, -50%) rotate(270deg);
     object-fit: cover;
-    
-    transition: opacity 0.8s ease;
+  }
+
+  .video-scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.4);
+    mix-blend-mode: multiply;
+  }
+
+  .hero-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(700px, 88vw);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(24px, 5vw, 40px);
   }
 
   .tagline {
-    position: absolute;
-    width: 700px;
-    left: calc(50% - 350px);
-    top: 304px;
+    margin: 0;
+    text-align: center;
     font-family: 'Inter', sans-serif;
     font-weight: 500;
-    font-size: 40px;
-    line-height: 48px;
-    color: #000000;
+    font-size: clamp(24px, 6vw, 40px);
+    line-height: 1.2;
+    color: #f7f4ec;
     letter-spacing: -0.03em;
     /*text-transform: uppercase;*/
   }
 
-  .btn-create {
-    position: absolute;
-    left: calc(50% - 350px);
-    top: 484px;
-    display: inline-block;
-    padding: 14px 32px;
-    background: #000;
-    color: #fff;
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-    font-size: 16px;
-    letter-spacing: -0.03em;
-    text-decoration: none;
-    border-radius: 8px;
-    transition: opacity 0.15s;
+  .mobile-break {
+    display: none;
   }
 
-  .btn-create:hover {
-    opacity: 0.75;
-  }
-
-  .kofi {
-    position: absolute;
-    width: 34px;
-    height: 27px;
-    right: 44px;
-    top: 7px;
-    background: #b0aca3;
-    border-radius: 4px;
-    mix-blend-mode: darken;
+  @media (max-width: 949px) {
+    .mobile-break {
+      display: inline;
+    }
   }
 </style>
