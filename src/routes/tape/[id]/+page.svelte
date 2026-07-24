@@ -5,10 +5,12 @@
   import { fly } from 'svelte/transition'
   import { cubicIn } from 'svelte/easing'
   import PlayerControls from '$lib/components/PlayerControls.svelte'
+  import TapeButton from '$lib/components/TapeButton.svelte'
+  import { page } from '$app/state'
 
   let { data }: { data: PageData } = $props()
 
-  let intro = $state(true)
+  let intro = $state(page.url.searchParams.get('skip_intro') !== 'true')
   let currentTrackIndex = $state(0)
   let isPlaying = $state(false)
   let isLoaded = $state(false)
@@ -183,16 +185,19 @@
         />
       {/if}
       <div class="intro-label-card">
-        <span class="intro-label-title">{data.tape.title}</span>
         {#if data.tape.dedication}
           <span class="intro-label-desc">{data.tape.dedication}</span>
         {/if}
+        <TapeButton
+          onclick={() => intro = false}
+          background="#f7f4ec"
+          color="#000000"
+          style="padding: 8px 18px; font-size: 13px;"
+        >
+          Put on the tape →
+        </TapeButton>
       </div>
     </div>
-
-    <button class="btn-put-on" onclick={() => intro = false}>
-      Put on the tape →
-    </button>
   </div>
 {/if}
 
@@ -316,31 +321,16 @@
   .intro-label-card {
     position: absolute;
     left: calc(50% - 131px);
-    top: calc(50% - 23px);
+    top: 50%;
+    transform: translateY(-50%);
     width: 262px;
-    height: 46px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 5px 10px;
-    gap: 2px;
-    background: #F7F3EF;
-    box-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    gap: 6px;
     box-sizing: border-box;
-  }
-
-  .intro-label-title {
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-size: 16px;
-    line-height: 19px;
-    text-align: center;
-    color: #000000;
-    width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .intro-label-desc {
@@ -355,21 +345,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-
-  .btn-put-on {
-    padding: var(--space-3) var(--space-6);
-    background: var(--color-black, #000);
-    color: var(--color-white, #fff);
-    border: none;
-    font-family: inherit;
-    font-size: var(--text-base);
-    letter-spacing: var(--tracking-base);
-    cursor: pointer;
-    border-radius: var(--radius-md);
-    transition: opacity 0.15s;
-  }
-
-  .btn-put-on:hover { opacity: 0.75; }
 
   .tape-page {
     min-height: 100vh;
