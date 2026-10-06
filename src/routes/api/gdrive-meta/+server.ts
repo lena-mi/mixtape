@@ -72,7 +72,7 @@ export const GET: RequestHandler = async ({ url }) => {
   if (!id) return json({ filename: '', duration: 0 }, { status: 400 })
 
   const candidates = [
-    `https://drive.usercontent.google.com/download?id=${id}&export=download&authuser=0`,
+    `https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`,
     `https://drive.google.com/uc?export=download&id=${id}`,
   ]
 

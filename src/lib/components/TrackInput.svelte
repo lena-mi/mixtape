@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isYoutubeUrl, rewriteAudioUrl, probeAudio, formatDuration, extractFilename } from '$lib/utils/audioUrl'
+  import { isYoutubeUrl, rewriteAudioUrl, probeAudio, formatDuration, extractFilename, extractGoogleDriveId, unsupportedHostMessage } from '$lib/utils/audioUrl'
   import type { AudioSourceType, CommitHint } from '$lib/utils/audioUrl'
 
   type TrackState = 'idle' | 'processing' | 'probing' | 'naming' | 'filled' | 'renaming' | 'error'
@@ -56,12 +56,19 @@
         trackState = 'error'
       }
     } else {
+      const unsupported = unsupportedHostMessage(rawUrl)
+      if (unsupported) {
+        errorMessage = unsupported
+        trackState = 'error'
+        return
+      }
+
       trackState = 'probing'
       errorMessage = ''
       const { resolvedUrl, sourceType } = rewriteAudioUrl(rawUrl)
 
       if (sourceType === 'google_drive') {
-        const gdId = rawUrl.match(/drive\.google\.com\/file\/d\/([^/?#]+)/)?.[1] ?? ''
+        const gdId = extractGoogleDriveId(rawUrl) ?? ''
         const [metaResult, probeResult] = await Promise.allSettled([
           gdId ? fetch(`/api/gdrive-meta?id=${gdId}`).then(r => r.json()) : Promise.resolve({ filename: '', duration: 0 }),
           probeAudio(resolvedUrl, 20000),
@@ -70,6 +77,11 @@
         const duration = (meta.duration > 0)
           ? meta.duration
           : (probeResult.status === 'fulfilled' ? probeResult.value.duration : 0)
+        if (duration <= 0) {
+          errorMessage = "Couldn't load this Google Drive file. Make sure sharing is set to “Anyone with the link”."
+          trackState = 'error'
+          return
+        }
         if (duration > SIDE_LIMIT) {
           errorMessage = `This track is ${formatDuration(duration)} — longer than 45 minutes`
           trackState = 'error'
