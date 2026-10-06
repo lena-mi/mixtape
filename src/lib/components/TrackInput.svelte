@@ -1,8 +1,10 @@
 <script lang="ts">
   import { isYoutubeUrl, rewriteAudioUrl, probeAudio, formatDuration, extractFilename, extractGoogleDriveId, unsupportedHostMessage } from '$lib/utils/audioUrl'
   import type { AudioSourceType, CommitHint } from '$lib/utils/audioUrl'
+  import { looksLikeLink, searchYoutube, classifyResult, RESULT_KIND_LABELS } from '$lib/utils/youtubeSearch'
+  import type { SearchResult, ResultKind } from '$lib/utils/youtubeSearch'
 
-  type TrackState = 'idle' | 'processing' | 'probing' | 'naming' | 'filled' | 'renaming' | 'error'
+  type TrackState = 'idle' | 'processing' | 'probing' | 'searching' | 'choosing' | 'naming' | 'filled' | 'renaming' | 'error'
 
   let {
     index,
@@ -11,6 +13,7 @@
     initialState = 'idle',
     initialTitle = '',
     initialUrl = '',
+    sideRemaining = Infinity,
   }: {
     index: number
     oncommit?: (url: string, hint?: CommitHint) => Promise<{ title: string }>
@@ -18,6 +21,7 @@
     initialState?: TrackState
     initialTitle?: string
     initialUrl?: string
+    sideRemaining?: number
   } = $props()
 
   let trackState: TrackState = $state(initialState)
@@ -29,6 +33,25 @@
   let probedResolvedUrl = $state('')
   let probedSourceType: AudioSourceType = $state('unknown')
   let errorMessage = $state('')
+  let searchResults: SearchResult[] = $state([])
+  let searchQuery = $state('')
+  let nextPageToken: string | null = $state(null)
+  let loadingMore = $state(false)
+  let kindFilter: Exclude<ResultKind, 'other'> | 'all' = $state('all')
+  let activeIndex = $state(-1)
+  let previewId: string | null = $state(null)
+  let resultsEl: HTMLUListElement | null = $state(null)
+
+  const classifiedResults = $derived(searchResults.map(r => ({ result: r, kind: classifyResult(r) })))
+  const availableKinds = $derived(
+    (Object.keys(RESULT_KIND_LABELS) as (keyof typeof RESULT_KIND_LABELS)[])
+      .filter(k => classifiedResults.some(c => c.kind === k))
+  )
+  const visibleResults = $derived(
+    kindFilter === 'all'
+      ? searchResults
+      : classifiedResults.filter(c => c.kind === kindFilter).map(c => c.result)
+  )
   let nameInputEl: HTMLInputElement | null = $state(null)
 
   const SIDE_LIMIT = 2700
@@ -41,9 +64,14 @@
 
   async function confirm() {
     if (!url.trim() || !oncommit) return
-    if (trackState === 'processing' || trackState === 'probing') return
+    if (trackState === 'processing' || trackState === 'probing' || trackState === 'searching') return
 
     const rawUrl = url.trim()
+
+    if (!looksLikeLink(rawUrl)) {
+      await search(rawUrl)
+      return
+    }
 
     if (isYoutubeUrl(rawUrl)) {
       trackState = 'processing'
@@ -127,6 +155,98 @@
     }
   }
 
+  function clearSearch() {
+    searchResults = []
+    nextPageToken = null
+    kindFilter = 'all'
+    activeIndex = -1
+    previewId = null
+  }
+
+  async function search(query: string) {
+    trackState = 'searching'
+    errorMessage = ''
+    clearSearch()
+    try {
+      const page = await searchYoutube(query)
+      if (page.results.length === 0) {
+        errorMessage = 'No matches found. Try different words, or paste a link.'
+        trackState = 'error'
+        return
+      }
+      searchQuery = query
+      searchResults = page.results
+      nextPageToken = page.nextPageToken
+      trackState = 'choosing'
+    } catch (e) {
+      errorMessage = e instanceof Error ? e.message : 'Search failed. Try again, or paste a link.'
+      trackState = 'error'
+    }
+  }
+
+  async function loadMore() {
+    if (!nextPageToken || loadingMore) return
+    loadingMore = true
+    try {
+      const page = await searchYoutube(searchQuery, nextPageToken)
+      const seen = new Set(searchResults.map(r => r.videoId))
+      searchResults = [...searchResults, ...page.results.filter(r => !seen.has(r.videoId))]
+      nextPageToken = page.nextPageToken
+    } catch (e) {
+      errorMessage = e instanceof Error ? e.message : 'Search failed. Try again, or paste a link.'
+      nextPageToken = null
+    } finally {
+      loadingMore = false
+    }
+  }
+
+  function setKindFilter(kind: Exclude<ResultKind, 'other'> | 'all') {
+    kindFilter = kind
+    activeIndex = -1
+  }
+
+  function fits(result: SearchResult): boolean {
+    return result.duration <= sideRemaining
+  }
+
+  function togglePreview(videoId: string) {
+    previewId = previewId === videoId ? null : videoId
+  }
+
+  // Skip into the song a little so the preview isn't all intro
+  function previewStart(result: SearchResult): number {
+    return Math.floor(Math.min(30, result.duration * 0.25))
+  }
+
+  function moveActive(step: 1 | -1) {
+    let i = activeIndex
+    do {
+      i += step
+    } while (i >= 0 && i < visibleResults.length && !fits(visibleResults[i]))
+    if (i < -1 || i >= visibleResults.length) return
+    activeIndex = i
+    resultsEl?.querySelectorAll('.result-row')[i]?.scrollIntoView({ block: 'nearest' })
+  }
+
+  async function pickResult(result: SearchResult) {
+    if (!oncommit || !fits(result)) return
+    clearSearch()
+    trackState = 'processing'
+    try {
+      const committed = await oncommit(`https://www.youtube.com/watch?v=${result.videoId}`)
+      title = committed.title
+      trackState = 'filled'
+    } catch (e) {
+      errorMessage = e instanceof Error ? e.message : 'Could not load this track'
+      trackState = 'error'
+    }
+  }
+
+  // Links commit on blur as before; searches only run on Enter so stray blurs don't spend quota
+  function handleUrlBlur() {
+    if (looksLikeLink(url)) confirm()
+  }
+
   async function confirmNaming() {
     if (!nameValue.trim() || !oncommit) return
 
@@ -147,8 +267,24 @@
   }
 
   function handleUrlKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') confirm()
-    if (e.key === 'Escape') resetToIdle()
+    if (trackState === 'choosing' && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      e.preventDefault()
+      moveActive(e.key === 'ArrowDown' ? 1 : -1)
+      return
+    }
+    if (e.key === 'Enter') {
+      const active = trackState === 'choosing' ? visibleResults[activeIndex] : undefined
+      if (active) pickResult(active)
+      else confirm()
+    }
+    if (e.key === 'Escape') {
+      if (trackState === 'choosing') {
+        clearSearch()
+        trackState = 'idle'
+      } else {
+        resetToIdle()
+      }
+    }
   }
 
   function handleNamingKeydown(e: KeyboardEvent) {
@@ -163,6 +299,7 @@
     probedDuration = 0
     probedResolvedUrl = ''
     errorMessage = ''
+    clearSearch()
     trackState = 'idle'
   }
 
@@ -188,25 +325,25 @@
   <div class="track-row">
     <div
       class="track-field"
-      class:is-idle={trackState === 'idle'}
+      class:is-idle={trackState === 'idle' || trackState === 'choosing'}
       class:is-error={trackState === 'error'}
-      class:is-processing={trackState === 'processing' || trackState === 'probing'}
+      class:is-processing={trackState === 'processing' || trackState === 'probing' || trackState === 'searching'}
     >
       <span class="track-label">{index}:</span>
 
-      {#if trackState === 'idle' || trackState === 'error'}
+      {#if trackState === 'idle' || trackState === 'error' || trackState === 'choosing'}
         <input
           class="url-input"
           type="text"
           bind:value={url}
           onkeydown={handleUrlKeydown}
-          onblur={confirm}
-          placeholder=""
-          aria-label="YouTube or audio URL for track {index}"
+          onblur={handleUrlBlur}
+          placeholder="Search a song or paste a link"
+          aria-label="Search for a song or paste a link for track {index}"
           aria-invalid={trackState === 'error'}
         />
 
-      {:else if trackState === 'processing' || trackState === 'probing'}
+      {:else if trackState === 'processing' || trackState === 'probing' || trackState === 'searching'}
         <div class="processing-fill" aria-label="Loading…" aria-busy="true"></div>
 
       {:else if trackState === 'naming'}
@@ -256,6 +393,73 @@
       {/if}
     </div>
   </div>
+
+  {#if trackState === 'choosing'}
+    <div class="search-panel">
+      {#if availableKinds.length > 1}
+        <div class="kind-chips" role="group" aria-label="Filter results by version">
+          <button class="chip" class:is-active={kindFilter === 'all'} aria-pressed={kindFilter === 'all'} onclick={() => setKindFilter('all')}>All</button>
+          {#each availableKinds as kind (kind)}
+            <button class="chip" class:is-active={kindFilter === kind} aria-pressed={kindFilter === kind} onclick={() => setKindFilter(kind)}>{RESULT_KIND_LABELS[kind]}</button>
+          {/each}
+        </div>
+      {/if}
+
+      <ul class="search-results" bind:this={resultsEl} aria-label="Search results for track {index}">
+        {#each visibleResults as result, i (result.videoId)}
+          {@const resultFits = fits(result)}
+          <li class="result-row" class:is-active={i === activeIndex} class:is-unfit={!resultFits}>
+            <div class="result-main">
+              <button
+                class="preview-btn"
+                onclick={() => togglePreview(result.videoId)}
+                aria-label="{previewId === result.videoId ? 'Stop preview of' : 'Preview'} {result.title}"
+                aria-pressed={previewId === result.videoId}
+              >
+                {#if result.thumbnail}
+                  <img class="result-thumb" src={result.thumbnail} alt="" />
+                {/if}
+                <span class="preview-icon" aria-hidden="true">{previewId === result.videoId ? '■' : '▶'}</span>
+              </button>
+              <button class="search-result" disabled={!resultFits} onclick={() => pickResult(result)}>
+                <span class="result-text">
+                  <span class="result-title">{result.title}</span>
+                  <span class="result-channel">{result.channel}</span>
+                </span>
+                <span class="result-meta">
+                  <span class="duration-badge">{formatDuration(result.duration)}</span>
+                  {#if !resultFits}
+                    <span class="fit-note">doesn't fit</span>
+                  {/if}
+                </span>
+              </button>
+            </div>
+            {#if previewId === result.videoId}
+              <iframe
+                class="preview-player"
+                src="https://www.youtube-nocookie.com/embed/{result.videoId}?autoplay=1&start={previewStart(result)}&rel=0"
+                title="Preview: {result.title}"
+                allow="autoplay; encrypted-media"
+              ></iframe>
+            {/if}
+          </li>
+        {:else}
+          <li class="results-empty">No {kindFilter === 'all' ? '' : RESULT_KIND_LABELS[kindFilter].toLowerCase() + ' '}versions in these results.</li>
+        {/each}
+        {#if nextPageToken}
+          <li>
+            <button class="load-more" onclick={loadMore} disabled={loadingMore}>
+              {loadingMore ? 'Loading…' : 'More results'}
+            </button>
+          </li>
+        {/if}
+      </ul>
+
+      {#if sideRemaining < Infinity}
+        <p class="side-left">{formatDuration(sideRemaining)} left on this side</p>
+      {/if}
+    </div>
+  {/if}
 
   {#if trackState === 'error' && errorMessage}
     <p class="error-hint">{errorMessage}</p>
@@ -309,6 +513,217 @@
     letter-spacing: var(--tracking-xs);
     color: #c00;
     padding: var(--space-1) var(--space-4) 0 var(--space-6);
+  }
+
+  /* ── Choosing: scrollable search results under the field ── */
+
+  .search-panel {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-border);
+    border-top: none;
+  }
+
+  .kind-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4) var(--space-2) var(--space-6);
+  }
+
+  .chip {
+    background: none;
+    border: 1px solid var(--color-gray-border);
+    border-radius: 999px;
+    padding: var(--space-1) var(--space-3);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-xs);
+    color: var(--color-gray-secondary);
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+
+  .chip:hover {
+    border-color: var(--color-black);
+    color: var(--color-black);
+  }
+
+  .chip.is-active {
+    background: var(--color-black);
+    border-color: var(--color-black);
+    color: var(--color-white);
+  }
+
+  .search-results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: min(60vh, 420px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .result-row {
+    transition: background 0.15s;
+  }
+
+  .result-row:hover:not(.is-unfit),
+  .result-row.is-active {
+    background: var(--color-page-bg);
+  }
+
+  .result-main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4) var(--space-2) var(--space-6);
+  }
+
+  .preview-btn {
+    position: relative;
+    flex-shrink: 0;
+    width: 64px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--color-gray-surface);
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .result-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .preview-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-xs);
+    color: var(--color-white);
+    background: rgb(0 0 0 / 0.35);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .preview-btn:hover .preview-icon,
+  .preview-btn:focus-visible .preview-icon,
+  .preview-btn[aria-pressed='true'] .preview-icon {
+    opacity: 1;
+  }
+
+  .search-result {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    color: var(--color-black);
+  }
+
+  .search-result:disabled {
+    cursor: not-allowed;
+  }
+
+  .is-unfit .search-result,
+  .is-unfit .result-thumb {
+    opacity: 0.45;
+  }
+
+  .result-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .result-title,
+  .result-channel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .result-title {
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-sm);
+  }
+
+  .result-channel {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-xs);
+    color: var(--color-gray-secondary);
+  }
+
+  .result-meta {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .fit-note {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-xs);
+    color: #c00;
+  }
+
+  /* YouTube requires embedded players to be at least 200×200 */
+  .preview-player {
+    display: block;
+    width: calc(100% - var(--space-6) - var(--space-4));
+    max-width: 400px;
+    aspect-ratio: 16 / 9;
+    min-height: 200px;
+    margin: 0 var(--space-4) var(--space-3) var(--space-6);
+    border: none;
+  }
+
+  .results-empty {
+    padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+    font-size: var(--text-sm);
+    color: var(--color-gray-secondary);
+  }
+
+  .load-more {
+    width: 100%;
+    padding: var(--space-3);
+    background: none;
+    border: none;
+    border-top: 1px solid var(--color-gray-border);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-xs);
+    color: var(--color-black);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .load-more:disabled {
+    cursor: default;
+    color: var(--color-gray-muted);
+  }
+
+  .side-left {
+    padding: var(--space-2) var(--space-4) var(--space-2) var(--space-6);
+    border-top: 1px solid var(--color-gray-border);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-xs);
+    color: var(--color-gray-muted);
   }
 
   .track-label {

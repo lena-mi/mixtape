@@ -437,6 +437,7 @@
                     initialState={slot.savedTitle ? 'filled' : 'idle'}
                     initialTitle={slot.savedTitle ?? ''}
                     initialUrl={slot.savedUrl ?? ''}
+                    sideRemaining={remaining}
                     oncommit={(url, hint) => handleCommit(slot.key, url, side, hint)}
                     onrename={(newTitle) => handleRename(slot.key, side, newTitle)}
                   />
