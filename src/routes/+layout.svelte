@@ -77,6 +77,7 @@
 		<a href="/create" class="nav-link nav-new" use:scramble>New Mixtape</a>
 		<button class="nav-link" onclick={() => (manifestoOpen = true)} use:scramble>Manifesto</button>
 		<a href="/tape/96662555-062c-420f-8967-b445da49fd5c?skip_intro=true" class="nav-link" use:scramble>Tape of the Season</a>
+		<a href="/play" class="nav-link" use:scramble>Player</a>
 		<a href="https://buymeacoffee.com/le_na_mi" target="_blank" rel="noopener" class="nav-link bmc-link" use:scramble>Buy me a coffee</a>
 	</nav>
 
@@ -96,6 +97,7 @@
 		<a href="/create" class="mobile-link" onclick={closeMobileMenu} use:scramble>New Mixtape</a>
 		<button class="mobile-link" onclick={openManifesto} use:scramble>Manifesto</button>
 		<a href="/tape/96662555-062c-420f-8967-b445da49fd5c?skip_intro=true" class="mobile-link" onclick={closeMobileMenu} use:scramble>Tape of the Season</a>
+		<a href="/play" class="mobile-link" onclick={closeMobileMenu} use:scramble>Player</a>
 		<a href="https://buymeacoffee.com/le_na_mi" target="_blank" rel="noopener" class="mobile-link" onclick={closeMobileMenu} use:scramble>Buy me a coffee</a>
 	</div>
 {/if}
